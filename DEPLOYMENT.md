@@ -120,10 +120,8 @@ git push -u origin main
 
 ## 6. Known limitations / follow-ups
 
-- **Per-land badges** ("Art Explorer", etc.): the badge criteria key off a land
-  *slug* (e.g. `art-land`) while `land_hours.land_id` stores the land *id*
-  (e.g. `land-art`), so per-land badges may not award. Pre-existing logic; not a
-  security issue. Fix by mapping id→slug in the checkout badge evaluation.
+- **Per-land badges** ("Art Explorer", etc.): FIXED — checkout now maps land id
+  → slug before evaluating land-visit badge criteria.
 - **Mock-data mode**: with no Supabase env set, the app served sample data for
   design preview. Now that staff routes are guarded, those guarded endpoints
   return 503 in mock mode — expected; mock mode is for visual preview only.

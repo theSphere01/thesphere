@@ -6,6 +6,7 @@ import { handleRouteError } from "@/lib/auth/handle-error";
 import { calculatePoints } from "@/lib/points/calculator";
 import { evaluateBadges } from "@/lib/badges/evaluator";
 import { getVisitDiscount, generateCode } from "@/lib/discounts/generator";
+import { LANDS } from "@/lib/constants";
 import type { LandHour } from "@/lib/types";
 
 const LandHourInputSchema = z.object({
@@ -172,9 +173,13 @@ export async function POST(req: NextRequest) {
     // Per-land visit counts
     const { data: landVisitData } = await supabase
       .from("land_hours").select("land_id").eq("profile_id", profile_id);
+    // Badge criteria key off the land SLUG (e.g. "art-land"), but land_hours
+    // stores the land id (e.g. "land-art"); map id -> slug so per-land badges award.
+    const idToSlug: Record<string, string> = Object.fromEntries(LANDS.map((l) => [l.id, l.slug]));
     const landVisitCounts: Record<string, number> = {};
     for (const row of (landVisitData ?? [])) {
-      landVisitCounts[row.land_id] = (landVisitCounts[row.land_id] ?? 0) + 1;
+      const slug = idToSlug[row.land_id] ?? row.land_id;
+      landVisitCounts[slug] = (landVisitCounts[slug] ?? 0) + 1;
     }
 
     const points_result = calculatePoints(
