@@ -1,0 +1,315 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* ── Sphere Brand ── */
+  --color-sphere-yellow:       #F5C400;
+  --color-sphere-yellow-dark:  #D4A800;
+  --color-sphere-yellow-light: #FFD84D;
+  --color-sphere-coral:        #FF6B47;
+  --color-sphere-coral-dark:   #E55A38;
+  --color-sphere-coral-light:  #FF8A6B;
+  --color-sphere-gold:         #D4A843;
+  --color-sphere-gold-light:   #E8C96B;
+  --color-sphere-gold-dark:    #B8922E;
+
+  /* ── WellSpring Brand ── */
+  --color-ws-blue:             #1578a8;
+  --color-ws-blue-dark:        #0f5a82;
+  --color-ws-blue-light:       #2496cc;
+  --color-ws-green:            #74a832;
+  --color-ws-green-dark:       #5a8225;
+  --color-ws-green-light:      #8dc93e;
+
+  /* ── Pathway Colors (floor outside The Sphere) ── */
+  --color-path-blue:           #4CC9F0;
+  --color-path-green:          #52D68A;
+  --color-path-yellow:         #FFD166;
+  --color-path-pink:           #FF6B9D;
+  --color-path-orange:         #FF8C42;
+
+  /* ── Candy Dreamland Colors (warm, comfortable) ── */
+  --color-candy-pink:          #FF6B9D;
+  --color-candy-lime:          #52D68A;
+  --color-candy-yellow:        #FFD166;
+  --color-candy-blue:          #4CC9F0;
+  --color-candy-purple:        #A78BFA;
+  --color-candy-orange:        #FF8C42;
+  --color-candy-teal:          #2EC4B6;
+
+  /* ── Land Theme Colors (vibrant) ── */
+  --color-land-art:            #FF2D55;
+  --color-land-fashion:        #BF00FF;
+  --color-land-cooking:        #FF9500;
+  --color-land-science:        #00CC44;
+  --color-land-lego:           #FF6A00;
+  --color-land-vr:             #007AFF;
+  --color-land-sports:         #00E5CC;
+  --color-land-gardening:      #00BB33;
+  --color-land-nilco:          #FFD100;
+  --color-land-beauty:         #FF2D78;
+  --color-land-handmade:       #FF5533;
+
+  /* ── Neutrals ── */
+  --color-dark:                #1a1a2e;
+  --color-dark-mid:            #16213e;
+  --color-dark-light:          #0f3460;
+  --color-surface:             #ffffff;
+  --color-surface-2:           #fff9f0;
+  --color-border:              #e8e0d5;
+  --color-text:                #1a1a2e;
+  --color-text-muted:          #6b5c4e;
+  --color-text-light:          #9e8e80;
+
+  /* ── Badge Rarities ── */
+  --color-rarity-common:       #94a3b8;
+  --color-rarity-rare:         #007AFF;
+  --color-rarity-epic:         #BF00FF;
+  --color-rarity-legendary:    #D4A843;
+
+  /* ── Rank Colors ── */
+  --color-rank-gold:           #FFD700;
+  --color-rank-silver:         #C0C0C0;
+  --color-rank-bronze:         #CD7F32;
+
+  /* ── Fonts ── */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background: #ffffff;
+  color: var(--color-dark);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* ── Mobile: prevent iOS auto-zoom on inputs (must be ≥ 16px) ── */
+input, select, textarea { font-size: 16px; }
+
+/* ── Mobile: remove tap flash, prevent 300ms delay ── */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── Mobile: prevent text selection on interactive elements ── */
+button, [role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Safe area utilities (iOS notch / Android cutout) ── */
+.pt-safe  { padding-top: env(safe-area-inset-top, 0px); }
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pb-nav   { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+
+/* ── Touch targets: minimum 44×44px (Apple HIG / WCAG) ── */
+.tap-target { min-height: 44px; min-width: 44px; }
+
+/* ── Smooth momentum scroll on iOS ── */
+.scroll-smooth-mobile {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ── Hide scrollbar on carousels ── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Allow overscroll inside specific containers ── */
+.allow-overscroll { overscroll-behavior-y: auto; }
+
+/* ── Responsive type scale ── */
+h1 { font-size: clamp(1.75rem, 8vw, 4rem);  font-weight: 900; line-height: 1.1; }
+h2 { font-size: clamp(1.25rem, 5vw, 2rem);  font-weight: 700; line-height: 1.2; }
+h3 { font-size: clamp(1rem,   4vw, 1.5rem); font-weight: 600; }
+.hero-title { font-size: clamp(2.5rem, 12vw, 7rem); font-weight: 900; line-height: 0.95; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0ede8; }
+::-webkit-scrollbar-thumb { background: var(--color-sphere-coral); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-candy-pink); }
+
+/* ════════════════════════════════════════════
+   KEYFRAME ANIMATIONS
+   ════════════════════════════════════════════ */
+
+@keyframes gateOpen {
+  from { transform: scale(0.8) translateY(20px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);    opacity: 1; }
+}
+
+@keyframes archPulse {
+  0%, 100% { box-shadow: 0 0 30px 8px rgba(255,107,71,0.4), 0 0 60px 20px rgba(212,168,67,0.15); }
+  50%       { box-shadow: 0 0 50px 16px rgba(255,107,71,0.7), 0 0 90px 35px rgba(212,168,67,0.3); }
+}
+
+@keyframes ringPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.02); }
+}
+
+@keyframes badgeEarned {
+  0%   { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.4) rotate(10deg); opacity: 1; }
+  80%  { transform: scale(0.9) rotate(-3deg); }
+  100% { transform: scale(1)   rotate(0deg);  opacity: 1; }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(-8px); }
+  50%       { transform: translateY(8px);  }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(-4px) rotate(-1deg); }
+  50%       { transform: translateY(4px)  rotate(1deg);  }
+}
+
+@keyframes pathwayDraw {
+  from { stroke-dashoffset: 1000; opacity: 0; }
+  to   { stroke-dashoffset: 0;    opacity: 1; }
+}
+
+@keyframes pathFlow {
+  from { stroke-dashoffset: 13; }
+  to   { stroke-dashoffset: 0;  }
+}
+
+@keyframes pointsFlash {
+  0%   { opacity: 1; transform: translateY(0)   scale(1);   }
+  50%  { opacity: 1; transform: translateY(-24px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-48px) scale(0.8); }
+}
+
+@keyframes rankUp {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.2) translateY(-4px); }
+  100% { transform: scale(1); }
+}
+
+@keyframes portalOpen {
+  0%   { clip-path: circle(0% at 50% 50%);   opacity: 0; }
+  60%  { clip-path: circle(55% at 50% 50%);  opacity: 1; }
+  100% { clip-path: circle(150% at 50% 50%); opacity: 1; }
+}
+
+@keyframes starBurst {
+  0%   { transform: scale(0) rotate(0deg);   opacity: 1; }
+  80%  { transform: scale(1.5) rotate(180deg); opacity: 0.8; }
+  100% { transform: scale(2) rotate(360deg);  opacity: 0; }
+}
+
+@keyframes scanLine {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(100%);  }
+}
+
+@keyframes wristbandTap {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255,107,71,0.7); }
+  70%  { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255,107,71,0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255,107,71,0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(32px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes countUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+@keyframes nfcPing {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes successBounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40%  { transform: translateY(-20px); }
+  60%  { transform: translateY(-10px); }
+}
+
+/* ── Utility classes ── */
+.animate-float      { animation: float 3s ease-in-out infinite; }
+.animate-float-slow { animation: floatSlow 4s ease-in-out infinite; }
+.animate-shimmer    { animation: shimmer 2.5s linear infinite; }
+.animate-arch-pulse { animation: archPulse 3s ease-in-out infinite; }
+.animate-ring-pulse { animation: ringPulse 2.5s ease-in-out infinite; }
+.animate-slide-up   { animation: slideUp 0.5s ease-out forwards; }
+.animate-fade-in    { animation: fadeIn 0.5s ease-out forwards; }
+.animate-nfc-ping   { animation: nfcPing 1.5s ease-out infinite; }
+.animate-wristband  { animation: wristbandTap 1.5s ease-in-out infinite; }
+
+/* ── Shimmer gradient (for legendary badges) ── */
+.shimmer-gold {
+  background: linear-gradient(
+    90deg,
+    var(--color-sphere-gold-dark) 0%,
+    var(--color-sphere-gold-light) 40%,
+    #fff8dc 50%,
+    var(--color-sphere-gold-light) 60%,
+    var(--color-sphere-gold-dark) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 2.5s linear infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glass effect ── */
+.glass {
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.9);
+}
+
+.glass-dark {
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,107,71,0.3);
+}
+
+/* ── Arch glow ── */
+.arch-glow {
+  box-shadow: 0 0 40px rgba(255,107,71,0.5), 0 0 80px rgba(255,209,102,0.3), 0 0 120px rgba(82,214,138,0.2), inset 0 0 30px rgba(255,107,71,0.12);
+}
+
+/* ── Land color utility classes ── */
+.land-art       { --land-color: var(--color-land-art); }
+.land-fashion   { --land-color: var(--color-land-fashion); }
+.land-cooking   { --land-color: var(--color-land-cooking); }
+.land-science   { --land-color: var(--color-land-science); }
+.land-lego      { --land-color: var(--color-land-lego); }
+.land-vr        { --land-color: var(--color-land-vr); }
+.land-sports    { --land-color: var(--color-land-sports); }
+.land-gardening { --land-color: var(--color-land-gardening); }
+.land-nilco     { --land-color: var(--color-land-nilco); }
+.land-beauty    { --land-color: var(--color-land-beauty); }
+.land-handmade  { --land-color: var(--color-land-handmade); }

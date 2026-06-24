@@ -1,0 +1,264 @@
+"use client";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import { Menu, X, Zap, LogIn } from "lucide-react";
+
+const NAV_LINKS = [
+  { label: "Lands", href: "/lands" },
+  { label: "Leaderboard", href: "/leaderboard" },
+  { label: "Check In", href: "/checkin" },
+  { label: "Register", href: "/register" },
+];
+
+function useLoggedInProfile() {
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  useEffect(() => {
+    const id = sessionStorage.getItem("sphere_profile_id");
+    const name = sessionStorage.getItem("sphere_profile_name");
+    setProfileId(id);
+    setProfileName(name);
+  }, []);
+  return { profileId, profileName };
+}
+
+export default function PublicHeader() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { profileId, profileName } = useLoggedInProfile();
+
+  return (
+    <>
+      <motion.header
+        initial={{ y: -80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          background: "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderBottom: "3px solid transparent",
+          borderImage: "linear-gradient(90deg, #FF1A75, #FF7B00, #FFE500, #3EE000, #00C8FF, #C84DFF) 1",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
+          {/* Logo */}
+          <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} style={{ flexShrink: 0 }}>
+            <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <img
+                src="/images/sphere-logo-yellow.png"
+                alt="The Sphere by WellSpring"
+                style={{ height: 40, width: 40, objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(245,196,0,0.4))", pointerEvents: "none" }}
+              />
+              <div style={{ display: "flex", flexDirection: "column", lineHeight: 1, pointerEvents: "none" }}>
+                <span style={{ fontWeight: 900, fontSize: "0.95rem", color: "var(--color-sphere-coral)", letterSpacing: "-0.02em" }}>
+                  THE SPHERE
+                </span>
+                <span style={{ fontSize: "0.55rem", color: "var(--color-ws-blue)", letterSpacing: "0.05em", fontWeight: 600, textTransform: "uppercase" }}>
+                  Fun · Growth · Memories
+                </span>
+              </div>
+            </Link>
+          </motion.div>
+
+          {/* Desktop nav — hidden on mobile */}
+          <nav style={{ display: "flex", gap: "0.25rem", alignItems: "center" }} className="hidden-mobile">
+            {NAV_LINKS.map((link) => (
+              <motion.div key={link.href} whileHover={{ scale: 1.05 }}>
+                <Link
+                  href={link.href}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "9999px",
+                    color: "rgba(26,26,46,0.8)",
+                    textDecoration: "none",
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--color-sphere-coral)";
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,107,71,0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.color = "rgba(26,26,46,0.8)";
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                  }}
+                >
+                  {link.label}
+                </Link>
+              </motion.div>
+            ))}
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                href={profileId ? "/dashboard" : "/login"}
+                style={{
+                  marginLeft: "0.25rem",
+                  padding: "0.5rem 1.1rem",
+                  background: profileId
+                    ? "linear-gradient(135deg, var(--color-sphere-coral), var(--color-sphere-gold))"
+                    : "rgba(255,107,71,0.1)",
+                  border: profileId ? "none" : "1.5px solid rgba(255,107,71,0.35)",
+                  color: profileId ? "white" : "var(--color-sphere-coral)",
+                  borderRadius: "9999px",
+                  textDecoration: "none",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                }}
+              >
+                {profileId ? (
+                  <><Zap size={14} />{profileName ? profileName.split(" ")[0] : "My Stats"}</>
+                ) : (
+                  <><LogIn size={14} />Login</>
+                )}
+              </Link>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                href="/admin"
+                style={{
+                  marginLeft: "0.25rem",
+                  padding: "0.5rem 1.25rem",
+                  background: "var(--color-ws-blue)",
+                  color: "white",
+                  borderRadius: "9999px",
+                  textDecoration: "none",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                }}
+              >
+                Admin
+              </Link>
+            </motion.div>
+          </nav>
+
+          {/* Mobile nav — visible quick links + hamburger */}
+          <div className="show-mobile" style={{ display: "none", alignItems: "center", gap: "0.5rem" }}>
+            {/* Quick nav pills */}
+            <Link href="/lands" style={{
+              padding: "0.4rem 0.85rem",
+              background: "rgba(255,107,71,0.12)",
+              color: "var(--color-sphere-coral)",
+              borderRadius: "9999px",
+              textDecoration: "none",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              border: "1.5px solid rgba(255,107,71,0.3)",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
+            }}>Lands</Link>
+
+            <Link href={profileId ? "/dashboard" : "/login"} style={{
+              padding: "0.4rem 0.85rem",
+              background: profileId
+                ? "linear-gradient(135deg, var(--color-sphere-coral), var(--color-sphere-gold))"
+                : "rgba(21,120,168,0.12)",
+              color: profileId ? "white" : "var(--color-ws-blue)",
+              borderRadius: "9999px",
+              textDecoration: "none",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              border: profileId ? "none" : "1.5px solid rgba(21,120,168,0.3)",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
+            }}>
+              {profileId ? <><Zap size={12} />{profileName?.split(" ")[0] ?? "Me"}</> : <><LogIn size={12} />Login</>}
+            </Link>
+
+            {/* Hamburger for full menu */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{
+                background: menuOpen ? "var(--color-sphere-coral)" : "rgba(26,26,46,0.08)",
+                border: "none",
+                color: menuOpen ? "white" : "var(--color-dark)",
+                cursor: "pointer",
+                padding: "0.5rem",
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                touchAction: "manipulation",
+                minWidth: 40,
+                minHeight: 40,
+              }}
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </motion.button>
+          </div>
+        </div>
+      </motion.header>
+
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{
+              position: "fixed",
+              top: 64,
+              left: 0,
+              right: 0,
+              zIndex: 49,
+              background: "rgba(255,255,255,0.98)",
+              borderBottom: "2px solid rgba(255,107,71,0.3)",
+              overflow: "hidden",
+            }}
+          >
+            <nav style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {[
+                ...NAV_LINKS,
+                { label: profileId ? `My Dashboard${profileName ? ` (${profileName.split(" ")[0]})` : ""}` : "Login", href: profileId ? "/dashboard" : "/login" },
+                { label: "Admin", href: "/admin" },
+              ].map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    padding: "0.75rem 1rem",
+                    paddingLeft: "1.25rem",
+                    color: "var(--color-dark)",
+                    textDecoration: "none",
+                    borderRadius: "12px",
+                    fontSize: "1.1rem",
+                    fontWeight: 600,
+                    borderLeft: "3px solid var(--color-sphere-coral)",
+                    display: "block",
+                    touchAction: "manipulation",
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .hidden-mobile { display: none !important; }
+          .show-mobile   { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .show-mobile { display: none !important; }
+        }
+      `}</style>
+    </>
+  );
+}

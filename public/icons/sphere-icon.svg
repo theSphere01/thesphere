@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <circle cx="256" cy="256" r="256" fill="#1a1a2e"/>
+
+  <!-- Outer gold ring -->
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#D4A843" stroke-width="12"/>
+  <!-- Second gold ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#E8C96B" stroke-width="6"/>
+  <!-- Third gold ring -->
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#D4A843" stroke-width="4"/>
+
+  <!-- Main coral arch fill -->
+  <circle cx="256" cy="256" r="186" fill="#FF6B47"/>
+
+  <!-- Inner coral lighter -->
+  <circle cx="256" cy="256" r="160" fill="#FF8A6B"/>
+
+  <!-- Center sphere glow -->
+  <radialGradient id="centerGlow" cx="40%" cy="35%" r="50%">
+    <stop offset="0%" stop-color="#FFB89E" stop-opacity="0.9"/>
+    <stop offset="100%" stop-color="#FF6B47" stop-opacity="0"/>
+  </radialGradient>
+  <circle cx="256" cy="256" r="160" fill="url(#centerGlow)"/>
+
+  <!-- "S" lettermark for Sphere -->
+  <text
+    x="256"
+    y="300"
+    font-family="Georgia, serif"
+    font-size="160"
+    font-weight="900"
+    fill="white"
+    fill-opacity="0.95"
+    text-anchor="middle"
+    dominant-baseline="middle"
+  >S</text>
+
+  <!-- Gold dot accents around the ring -->
+  <circle cx="256" cy="26"  r="7" fill="#D4A843"/>
+  <circle cx="256" cy="486" r="7" fill="#D4A843"/>
+  <circle cx="26"  cy="256" r="7" fill="#D4A843"/>
+  <circle cx="486" cy="256" r="7" fill="#D4A843"/>
+</svg>
