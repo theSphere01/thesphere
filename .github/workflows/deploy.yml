@@ -6,9 +6,11 @@ name: Deploy to Vercel (Production)
 #   VERCEL_ORG_ID      – the Vercel team/org id
 #   VERCEL_PROJECT_ID  – the Vercel project id
 
+# Manual trigger only (run from the Actions tab). The recommended automatic
+# deploy-on-push path is the Vercel GitHub App (https://github.com/apps/vercel) —
+# native git deploys. This workflow stays as a one-off / fallback deploy option
+# and avoids creating runs while account-level deploy limits are in effect.
 on:
-  push:
-    branches: [main]
   workflow_dispatch: {}
 
 env:
