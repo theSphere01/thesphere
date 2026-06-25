@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import PWARegister from "@/components/pwa-register";
 import "./globals.css";
 
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body style={{ background: "var(--color-dark)", color: "var(--color-surface)", minHeight: "100vh", overflowX: "hidden", maxWidth: "100vw" }}>
         <PWARegister />
         {children}
+        <Analytics />
       </body>
     </html>
   );
