@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Menu, X, Zap, LogIn } from "lucide-react";
 
+// Camper / parent facing only. Staff & Admin live discreetly in the footer.
 const NAV_LINKS = [
   { label: "Lands", href: "/lands" },
   { label: "Leaderboard", href: "/leaderboard" },
-  { label: "Check In", href: "/checkin" },
   { label: "Register", href: "/register" },
 ];
 
@@ -115,25 +115,8 @@ export default function PublicHeader() {
                 {profileId ? (
                   <><Zap size={14} />{profileName ? profileName.split(" ")[0] : "My Stats"}</>
                 ) : (
-                  <><LogIn size={14} />Login</>
+                  <><LogIn size={14} />My Profile</>
                 )}
-              </Link>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link
-                href="/admin"
-                style={{
-                  marginLeft: "0.25rem",
-                  padding: "0.5rem 1.25rem",
-                  background: "var(--color-ws-blue)",
-                  color: "white",
-                  borderRadius: "9999px",
-                  textDecoration: "none",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                }}
-              >
-                Admin
               </Link>
             </motion.div>
           </nav>
@@ -171,7 +154,7 @@ export default function PublicHeader() {
               touchAction: "manipulation",
               WebkitTapHighlightColor: "transparent",
             }}>
-              {profileId ? <><Zap size={12} />{profileName?.split(" ")[0] ?? "Me"}</> : <><LogIn size={12} />Login</>}
+              {profileId ? <><Zap size={12} />{profileName?.split(" ")[0] ?? "Me"}</> : <><LogIn size={12} />Profile</>}
             </Link>
 
             {/* Hamburger for full menu */}
@@ -221,8 +204,7 @@ export default function PublicHeader() {
             <nav style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {[
                 ...NAV_LINKS,
-                { label: profileId ? `My Dashboard${profileName ? ` (${profileName.split(" ")[0]})` : ""}` : "Login", href: profileId ? "/dashboard" : "/login" },
-                { label: "Admin", href: "/admin" },
+                { label: profileId ? `My Dashboard${profileName ? ` (${profileName.split(" ")[0]})` : ""}` : "My Profile", href: profileId ? "/dashboard" : "/login" },
               ].map((link) => (
                 <Link
                   key={link.label}

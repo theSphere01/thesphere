@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Map, Trophy, QrCode, Zap } from "lucide-react";
+import { Home, Map, Trophy, Ticket, Zap } from "lucide-react";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -18,8 +18,8 @@ export function MobileBottomNav() {
     { href: "/",            label: "Home",    Icon: Home,   color: "#FF6B47" },
     { href: "/lands",       label: "Lands",   Icon: Map,    color: "#74a832" },
     { href: "/leaderboard", label: "Scores",  Icon: Trophy, color: "#D4A843" },
-    { href: "/checkin",     label: "Scan",    Icon: QrCode, color: "#1578a8" },
-    { href: profileId ? "/dashboard" : "/login", label: profileId ? "My Stats" : "Login", Icon: Zap, color: "#9B59B6" },
+    { href: "/register",    label: "Join",    Icon: Ticket, color: "#1578a8" },
+    { href: profileId ? "/dashboard" : "/login", label: profileId ? "My Stats" : "Profile", Icon: Zap, color: "#9B59B6" },
   ];
 
   return (
