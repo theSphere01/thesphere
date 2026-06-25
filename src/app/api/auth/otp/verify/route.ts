@@ -5,7 +5,7 @@ import { handleRouteError } from "@/lib/auth/handle-error";
 import { verifyOtpHash } from "@/lib/auth/otp";
 
 const schema = z.object({
-  phone: z.string().min(8).max(20),
+  phone: z.string().regex(/^\+?[0-9]{8,15}$/, "Invalid phone number"),
   code: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
 });
 
