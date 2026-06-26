@@ -105,14 +105,20 @@ export default function RegisterPage() {
       setChildName(json.data!.name ?? form.child_name);
       setStep("wristband");
 
-      // Attempt NFC write — write the SIGNED token, not the raw profile id
-      setNFCStatus("writing");
-      try {
-        const { writeNFCWristband } = await import("@/lib/nfc/nfc-writer");
-        await writeNFCWristband(tk);
-        setNFCStatus("done");
-        setTimeout(() => setStep("success"), 800);
-      } catch {
+      // Web NFC (writing the signed token to the tag) only works on Chrome for
+      // Android. On any other device go straight to the QR code instead of
+      // showing a "writing" attempt that is bound to fail.
+      if (typeof window !== "undefined" && "NDEFReader" in window) {
+        setNFCStatus("writing");
+        try {
+          const { writeNFCWristband } = await import("@/lib/nfc/nfc-writer");
+          await writeNFCWristband(tk);
+          setNFCStatus("done");
+          setTimeout(() => setStep("success"), 800);
+        } catch {
+          setNFCStatus("failed");
+        }
+      } else {
         setNFCStatus("failed");
       }
     } catch (err) {
@@ -360,7 +366,7 @@ export default function RegisterPage() {
                 ? "Writing Wristband..."
                 : nfcStatus === "done"
                 ? "Wristband Written!"
-                : "NFC Write Failed"}
+                : "Your Wristband QR Code"}
             </h2>
 
             {nfcStatus === "writing" && (
@@ -428,7 +434,8 @@ export default function RegisterPage() {
             {nfcStatus === "failed" && (
               <>
                 <p style={{ color: "var(--color-text-muted)", margin: "1.5rem 0 1rem" }}>
-                  NFC is not available. Here is the QR code — print or screenshot it.
+                  NFC tap needs an Android phone with Chrome. Use this QR code on the
+                  wristband instead — print it or screenshot it; staff scan it at the gate.
                 </p>
                 <div
                   style={{

@@ -12,6 +12,7 @@ interface ProfilePageData {
   profile: Profile;
   badges: ProfileBadge[];
   discount_codes: DiscountCode[];
+  wristband_qr: string | null;
   rank?: number;
 }
 
@@ -91,7 +92,7 @@ export default function ProfilePage() {
   if (loading) return <LoadingState />;
   if (error || !data) return <ErrorState message={error ?? "Profile not found"} />;
 
-  const { profile, badges, discount_codes, rank } = data;
+  const { profile, badges, discount_codes, wristband_qr, rank } = data;
   const earnedBadgeIds = badges.map((b) => b.badge_id);
   const initials = generateInitials(profile.name);
   const landsCount = profile.lands_visited?.length ?? 0;
@@ -523,22 +524,28 @@ export default function ProfilePage() {
                 marginBottom: "1.25rem",
               }}
             >
-              Show this at the gate if your wristband is unavailable
+              {wristband_qr
+                ? "Show this at the gate if your wristband is unavailable — staff can scan it straight off the screen."
+                : "No active wristband on file yet. Ask a staff member at the registration desk."}
             </p>
-            <div
-              style={{
-                display: "inline-block",
-                background: "#fff",
-                padding: 14,
-                borderRadius: 14,
-                boxShadow: "0 0 30px rgba(255,107,71,0.2)",
-              }}
-            >
-              <QRCodeSVG value={id} size={200} />
-            </div>
-            <p style={{ color: "rgba(148,163,184,0.5)", fontSize: "0.7rem", marginTop: "0.75rem" }}>
-              Profile ID: {id.slice(0, 8)}...
-            </p>
+            {wristband_qr && (
+              <>
+                <div
+                  style={{
+                    display: "inline-block",
+                    background: "#fff",
+                    padding: 14,
+                    borderRadius: 14,
+                    boxShadow: "0 0 30px rgba(255,107,71,0.2)",
+                  }}
+                >
+                  <QRCodeSVG value={wristband_qr} size={200} />
+                </div>
+                <p style={{ color: "rgba(148,163,184,0.5)", fontSize: "0.7rem", marginTop: "0.75rem" }}>
+                  Profile ID: {id.slice(0, 8)}...
+                </p>
+              </>
+            )}
           </div>
         </motion.section>
       </div>

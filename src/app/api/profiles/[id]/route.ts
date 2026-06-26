@@ -9,7 +9,7 @@ export async function GET(
     const { id } = await params;
     const supabase = createAdminClient();
 
-    const [profileRes, badgesRes, codesRes, leaderboardRes] = await Promise.all([
+    const [profileRes, badgesRes, codesRes, leaderboardRes, wristbandRes] = await Promise.all([
       // Public profile page is addressable by UUID — never return parent PII here.
       supabase
         .from("profiles")
@@ -32,6 +32,15 @@ export async function GET(
         .select("id, total_points")
         .order("total_points", { ascending: false })
         .limit(200),
+      // The signed wristband token, so the profile page can re-display the QR
+      // for staff to scan at the gate (its own UUID gates access).
+      supabase
+        .from("wristbands")
+        .select("qr_code")
+        .eq("profile_id", id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     if (profileRes.error) {
@@ -47,6 +56,7 @@ export async function GET(
         profile:       profileRes.data,
         badges:        badgesRes.data ?? [],
         discount_codes: codesRes.data ?? [],
+        wristband_qr:  wristbandRes.data?.qr_code ?? null,
         rank,
       },
     });
