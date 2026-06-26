@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function StaffLoginPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen" style={{ background: "var(--color-dark)" }} />}>
+    <Suspense fallback={<main className="min-h-screen theme-dark" style={{ background: "var(--color-dark)" }} />}>
       <StaffLoginForm />
     </Suspense>
   );
@@ -54,7 +54,7 @@ function StaffLoginForm() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--color-dark)" }}>
+    <main className="min-h-screen theme-dark flex items-center justify-center px-4" style={{ background: "var(--color-dark)" }}>
       <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl p-7 space-y-5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)" }}>
         <div>
           <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--color-sphere-gold)" }}>The Sphere</p>

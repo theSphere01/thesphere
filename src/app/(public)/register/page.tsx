@@ -137,6 +137,7 @@ export default function RegisterPage() {
 
   return (
     <div
+      className="theme-dark"
       style={{
         minHeight: "100vh",
         background: "var(--color-dark)",
@@ -149,8 +150,8 @@ export default function RegisterPage() {
     >
       {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ y: -16 }}
+        animate={{ y: 0 }}
         transition={{ duration: 0.4 }}
         style={{ textAlign: "center", marginBottom: "2.5rem" }}
       >
@@ -212,9 +213,9 @@ export default function RegisterPage() {
         {step === "form" && (
           <motion.div
             key="form"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
+            initial={{ x: 40 }}
+            animate={{ x: 0 }}
+            exit={{ x: -40 }}
             transition={{ duration: 0.3 }}
             style={{ width: "100%", maxWidth: 480 }}
           >
@@ -340,9 +341,9 @@ export default function RegisterPage() {
         {step === "wristband" && (
           <motion.div
             key="wristband"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.9 }}
             transition={{ duration: 0.35 }}
             style={{
               width: "100%",
@@ -466,8 +467,8 @@ export default function RegisterPage() {
         {step === "success" && (
           <motion.div
             key="success"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: 30 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.4, type: "spring", stiffness: 200, damping: 20 }}
             style={{
               width: "100%",

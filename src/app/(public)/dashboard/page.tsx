@@ -144,6 +144,7 @@ export default function DashboardPage() {
 
   return (
     <div
+      className="theme-dark"
       style={{
         minHeight: "100vh",
         background: `radial-gradient(ellipse at top, rgba(255,107,71,0.1) 0%, var(--color-dark) 50%)`,
@@ -175,7 +176,7 @@ export default function DashboardPage() {
             background: "rgba(255,255,255,0.06)",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 8,
-            color: "rgba(255,255,255,0.45)",
+            color: "rgba(255,255,255,0.72)",
             padding: "0.35rem 0.75rem",
             fontSize: "0.78rem",
             cursor: "pointer",
@@ -222,7 +223,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.45)", marginBottom: "0.25rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.72)", marginBottom: "0.25rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
               Welcome back
             </p>
             <h1 style={{ fontSize: "clamp(1.8rem, 6vw, 2.4rem)", fontWeight: 900, color: "white", margin: "0 0 0.5rem", lineHeight: 1.1 }}>
@@ -282,7 +283,7 @@ export default function DashboardPage() {
             <div style={{ fontSize: "clamp(3rem, 12vw, 5rem)", fontWeight: 900, lineHeight: 1, color: "white", margin: "0.25rem 0" }}>
               <AnimatedCounter value={pts} />
             </div>
-            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.82rem" }}>
+            <p style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.82rem" }}>
               {(next - pts).toLocaleString()} more pts to reach {next.toLocaleString()}
             </p>
             {/* Progress bar */}
@@ -386,7 +387,7 @@ export default function DashboardPage() {
                   <div style={{ fontFamily: "monospace", fontSize: "1rem", fontWeight: 800, color: "#4ade80", letterSpacing: "0.07em" }}>
                     {dc.code}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+                  <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.72)", marginTop: 2 }}>
                     {dc.discount_percent}% off · valid until{" "}
                     {new Date(dc.valid_until).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </div>
@@ -398,7 +399,7 @@ export default function DashboardPage() {
                     borderRadius: 8,
                     background: copiedCode === dc.code ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)",
                     border: `1px solid ${copiedCode === dc.code ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.12)"}`,
-                    color: copiedCode === dc.code ? "#4ade80" : "rgba(255,255,255,0.6)",
+                    color: copiedCode === dc.code ? "#4ade80" : "rgba(255,255,255,0.82)",
                     cursor: "pointer",
                     fontSize: "0.78rem",
                     display: "flex",
@@ -436,7 +437,7 @@ export default function DashboardPage() {
                     <div style={{ fontSize: "0.85rem", fontWeight: 700, color: bonus.color, marginBottom: "0.2rem" }}>
                       {bonus.title}
                     </div>
-                    <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.45 }}>
+                    <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.74)", lineHeight: 1.45 }}>
                       {bonus.description}
                     </div>
                   </div>
@@ -484,7 +485,7 @@ export default function DashboardPage() {
                   >
                     <div style={{ width: 28, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {entry.rank <= 3 ? <RankIcon rank={entry.rank} /> : (
-                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>#{entry.rank}</span>
+                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "rgba(255,255,255,0.68)" }}>#{entry.rank}</span>
                       )}
                     </div>
                     <div
@@ -508,7 +509,7 @@ export default function DashboardPage() {
                       }}>
                         {entry.name}{isMe && " (You)"}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+                      <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.68)", marginTop: 1 }}>
                         {entry.visit_count} visit{entry.visit_count !== 1 ? "s" : ""}
                         {entry.current_streak >= 3 && <span style={{ marginLeft: "0.3rem", color: "#fb923c" }}>🔥{entry.current_streak}</span>}
                       </div>
@@ -534,7 +535,7 @@ export default function DashboardPage() {
                   border: "1.5px solid rgba(255,107,71,0.3)",
                 }}
               >
-                <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", flex: 1 }}>
+                <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.68)", flex: 1 }}>
                   · · ·
                 </span>
                 <div style={{ width: 28, textAlign: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-sphere-coral)" }}>
@@ -572,7 +573,7 @@ export default function DashboardPage() {
                 borderRadius: 10,
                 border: "1px solid rgba(255,255,255,0.08)",
                 background: "transparent",
-                color: "rgba(255,255,255,0.45)",
+                color: "rgba(255,255,255,0.72)",
                 fontSize: "0.8rem",
                 fontWeight: 600,
                 cursor: "pointer",
@@ -664,7 +665,7 @@ function LoadingScreen() {
             margin: "0 auto 1rem",
           }}
         />
-        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.9rem" }}>Loading your sphere...</p>
+        <p style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.9rem" }}>Loading your sphere...</p>
       </div>
     </div>
   );

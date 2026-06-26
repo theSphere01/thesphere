@@ -106,6 +106,7 @@ export default function ProfilePage() {
 
   return (
     <div
+      className="theme-dark"
       style={{
         minHeight: "100vh",
         background: `radial-gradient(ellipse at top center, rgba(255,107,71,0.1) 0%, var(--color-dark) 50%)`,

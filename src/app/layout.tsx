@@ -1,10 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import PWARegister from "@/components/pwa-register";
 import "./globals.css";
-
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "The Sphere — Play. Earn. Win.",
@@ -36,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en">
       <body style={{ background: "var(--color-dark)", color: "var(--color-surface)", minHeight: "100vh", overflowX: "hidden", maxWidth: "100vw" }}>
         <PWARegister />
         {children}

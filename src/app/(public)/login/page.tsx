@@ -127,14 +127,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
+    <div className="theme-dark" style={{
       minHeight: "100vh",
       background: "radial-gradient(ellipse at top center, rgba(255,107,71,0.12) 0%, var(--color-dark) 55%)",
       display: "flex", flexDirection: "column", alignItems: "center",
       padding: "2.5rem 1.25rem 4rem", overflowX: "hidden",
     }}>
       <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 440 }}>
-        <motion.div initial={{ opacity: 0, y: -24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+        <motion.div initial={{ y: -24 }} animate={{ y: 0 }} transition={{ duration: 0.55 }} style={{ textAlign: "center", marginBottom: "1.5rem" }}>
           <ArchRings size={260} />
           <div style={{ marginTop: "-0.5rem" }}>
             <div style={{ display: "inline-block", background: "rgba(255,107,71,0.12)", border: "1px solid rgba(255,107,71,0.3)", borderRadius: 999, padding: "0.3rem 1rem", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-sphere-coral)", marginBottom: "0.75rem" }}>The Sphere</div>
@@ -147,7 +147,7 @@ export default function LoginPage() {
 
         <AnimatePresence mode="wait">
           {step === "phone" && (
-            <motion.div key="phone" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.3 }}>
+            <motion.div key="phone" initial={{ x: 40 }} animate={{ x: 0 }} exit={{ x: -40 }} transition={{ duration: 0.3 }}>
               <form onSubmit={requestCode}>
                 <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 24, padding: "2rem", marginBottom: "1.25rem" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.875rem" }}>
@@ -174,7 +174,7 @@ export default function LoginPage() {
           )}
 
           {step === "code" && (
-            <motion.div key="code" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.3 }}>
+            <motion.div key="code" initial={{ x: 40 }} animate={{ x: 0 }} exit={{ x: -40 }} transition={{ duration: 0.3 }}>
               <form onSubmit={verifyCode}>
                 <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 24, padding: "2rem", marginBottom: "1.25rem" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.875rem" }}>
@@ -195,7 +195,7 @@ export default function LoginPage() {
           )}
 
           {step === "confirm" && profile && (
-            <motion.div key="confirm" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.35, type: "spring", stiffness: 250, damping: 24 }}>
+            <motion.div key="confirm" initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ x: -40 }} transition={{ duration: 0.35, type: "spring", stiffness: 250, damping: 24 }}>
               <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,107,71,0.25)", borderRadius: 24, padding: "2rem", textAlign: "center", marginBottom: "1rem" }}>
                 <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.8rem", marginBottom: "1.25rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>Verified — is this you?</p>
                 <div style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, var(--color-sphere-coral), var(--color-sphere-gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "0 auto 1rem", boxShadow: "0 0 40px rgba(255,107,71,0.4)" }}>{generateInitials(profile.name)}</div>

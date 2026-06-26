@@ -101,6 +101,7 @@ export default function LeaderboardPage() {
 
   return (
     <div
+      className="theme-dark"
       style={{
         minHeight: "100vh",
         background: `radial-gradient(ellipse at top, rgba(212,168,67,0.08) 0%, var(--color-dark) 55%)`,

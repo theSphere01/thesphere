@@ -95,7 +95,7 @@ export default function LandsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--color-dark)" }}>
+    <div className="min-h-screen theme-dark" style={{ background: "var(--color-dark)" }}>
       {/* Back nav */}
       <div className="max-w-7xl mx-auto px-4 pt-6">
         <Link href="/"

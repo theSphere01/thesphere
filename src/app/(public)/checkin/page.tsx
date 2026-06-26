@@ -171,7 +171,7 @@ export default function CheckInPage() {
 
   // ── UI ──────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-dark)", paddingBottom: "4rem" }}>
+    <div className="theme-dark" style={{ minHeight: "100vh", background: "var(--color-dark)", paddingBottom: "4rem" }}>
       {/* Top bar */}
       <div
         style={{
