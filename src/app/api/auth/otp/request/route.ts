@@ -5,7 +5,10 @@ import { handleRouteError } from "@/lib/auth/handle-error";
 import { generateOtpCode, hashOtp } from "@/lib/auth/otp";
 import { getSmsProvider } from "@/lib/sms";
 
-const schema = z.object({ phone: z.string().min(8).max(20) });
+const schema = z.object({ phone: z.string().regex(/^\+?[0-9]{8,15}$/, "Invalid phone number") });
+
+// Don't send another code if one was issued for this phone within this window.
+const RESEND_COOLDOWN_MS = 45 * 1000;
 
 // ── POST /api/auth/otp/request ─────────────────────────────
 // Sends a one-time code to the parent's phone IF a profile exists for it.
@@ -25,6 +28,20 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (profile) {
+      // Rate limit: skip if a code was already issued recently (anti SMS-bombing).
+      // Response stays generic so it can't be used to probe timing either.
+      const { data: recent } = await supabase
+        .from("phone_otps")
+        .select("created_at")
+        .eq("phone", normalized)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (recent && Date.now() - new Date(recent.created_at).getTime() < RESEND_COOLDOWN_MS) {
+        return NextResponse.json({ data: { sent: true } });
+      }
+
       const code = generateOtpCode();
       // invalidate any previous unused codes for this phone
       await supabase.from("phone_otps").update({ consumed: true }).eq("phone", normalized).eq("consumed", false);
