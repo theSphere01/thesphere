@@ -160,6 +160,7 @@ export default function LeaderboardPage() {
         </motion.div>
 
         <motion.h1
+          className="leaderboard-hero-title"
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.55, delay: 0.1, type: "spring", stiffness: 200, damping: 20 }}
@@ -167,7 +168,7 @@ export default function LeaderboardPage() {
             fontSize: "clamp(3rem, 10vw, 7rem)",
             fontWeight: 900,
             lineHeight: 0.95,
-            letterSpacing: "-0.02em",
+            letterSpacing: 0,
             background: "linear-gradient(135deg, var(--color-sphere-coral) 0%, var(--color-sphere-gold) 60%, #fff8dc 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
@@ -483,6 +484,15 @@ export default function LeaderboardPage() {
           </p>
         )}
       </div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          .leaderboard-hero-title {
+            font-size: 2.55rem !important;
+            line-height: 1 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

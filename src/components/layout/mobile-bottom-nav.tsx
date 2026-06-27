@@ -11,8 +11,18 @@ export function MobileBottomNav() {
   const [profileId, setProfileId] = useState<string | null>(null);
 
   useEffect(() => {
-    setProfileId(sessionStorage.getItem("sphere_profile_id"));
-  }, []);
+    function readSession() {
+      setProfileId(sessionStorage.getItem("sphere_profile_id"));
+    }
+
+    readSession();
+    window.addEventListener("storage", readSession);
+    window.addEventListener("sphere-auth-change", readSession);
+    return () => {
+      window.removeEventListener("storage", readSession);
+      window.removeEventListener("sphere-auth-change", readSession);
+    };
+  }, [pathname]);
 
   const NAV_ITEMS = [
     { href: "/",            label: "Home",    Icon: Home,   color: "#FF6B47" },

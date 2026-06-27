@@ -1,8 +1,9 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, Zap, LogIn, LogOut } from "lucide-react";
+import { Menu, X, LogIn, LogOut } from "lucide-react";
 
 // Camper / parent facing only. Staff & Admin live discreetly in the footer.
 const NAV_LINKS = [
@@ -14,10 +15,23 @@ const NAV_LINKS = [
 function useLoggedInProfile() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
+  const pathname = usePathname();
+
   useEffect(() => {
-    setProfileId(sessionStorage.getItem("sphere_profile_id"));
-    setProfileName(sessionStorage.getItem("sphere_profile_name"));
-  }, []);
+    function readSession() {
+      setProfileId(sessionStorage.getItem("sphere_profile_id"));
+      setProfileName(sessionStorage.getItem("sphere_profile_name"));
+    }
+
+    readSession();
+    window.addEventListener("storage", readSession);
+    window.addEventListener("sphere-auth-change", readSession);
+    return () => {
+      window.removeEventListener("storage", readSession);
+      window.removeEventListener("sphere-auth-change", readSession);
+    };
+  }, [pathname]);
+
   return { profileId, profileName };
 }
 
@@ -27,6 +41,7 @@ function logout() {
   try {
     sessionStorage.removeItem("sphere_profile_id");
     sessionStorage.removeItem("sphere_profile_name");
+    window.dispatchEvent(new Event("sphere-auth-change"));
   } catch {
     /* ignore */
   }
@@ -55,20 +70,21 @@ export default function PublicHeader() {
           borderImage: "linear-gradient(90deg, #FF1A75, #FF7B00, #FFE500, #3EE000, #00C8FF, #C84DFF) 1",
         }}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, gap: "0.5rem" }}>
+        <div className="public-header-inner" style={{ maxWidth: 1200, width: "100%", margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, gap: "0.5rem" }}>
           {/* Logo */}
           <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} style={{ flexShrink: 1, minWidth: 0 }}>
             <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <img
+                className="public-header-logo-mark"
                 src="/images/sphere-logo-yellow.png"
                 alt="The Sphere by WellSpring"
                 style={{ height: 38, width: 38, objectFit: "contain", flexShrink: 0, filter: "drop-shadow(0 2px 8px rgba(245,196,0,0.4))", pointerEvents: "none" }}
               />
               <div style={{ display: "flex", flexDirection: "column", lineHeight: 1, pointerEvents: "none", minWidth: 0 }}>
-                <span style={{ fontWeight: 900, fontSize: "0.95rem", color: "var(--color-sphere-coral)", letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                <span className="public-header-brand-title" style={{ fontWeight: 900, fontSize: "0.95rem", color: "var(--color-sphere-coral)", letterSpacing: 0, whiteSpace: "nowrap" }}>
                   THE SPHERE
                 </span>
-                <span style={{ fontSize: "0.55rem", color: "var(--color-ws-blue)", letterSpacing: "0.05em", fontWeight: 600, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                <span className="public-header-brand-subtitle" style={{ fontSize: "0.55rem", color: "var(--color-ws-blue)", letterSpacing: "0.05em", fontWeight: 600, textTransform: "uppercase", whiteSpace: "nowrap" }}>
                   Fun · Growth · Memories
                 </span>
               </div>
@@ -76,7 +92,7 @@ export default function PublicHeader() {
           </motion.div>
 
           {/* Desktop nav — hidden on mobile */}
-          <nav style={{ display: "flex", gap: "0.25rem", alignItems: "center" }} className="hidden-mobile">
+          <nav className="public-header-desktop-nav" style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}>
             {NAV_LINKS.map((link) => (
               <motion.div key={link.href} whileHover={{ scale: 1.05 }}>
                 <Link
@@ -105,50 +121,28 @@ export default function PublicHeader() {
             ))}
 
             {profileId ? (
-              <>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Link
-                    href="/dashboard"
-                    style={{
-                      marginLeft: "0.25rem",
-                      padding: "0.5rem 1.1rem",
-                      background: "linear-gradient(135deg, var(--color-sphere-coral), var(--color-sphere-gold))",
-                      color: "white",
-                      borderRadius: "9999px",
-                      textDecoration: "none",
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.35rem",
-                    }}
-                  >
-                    <Zap size={14} />
-                    {firstName ?? "My Stats"}
-                  </Link>
-                </motion.div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={logout}
-                  style={{
-                    padding: "0.5rem 0.9rem",
-                    background: "transparent",
-                    border: "1.5px solid rgba(231,76,60,0.4)",
-                    color: "#E74C3C",
-                    borderRadius: "9999px",
-                    cursor: "pointer",
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.35rem",
-                  }}
-                >
-                  <LogOut size={14} />
-                  Logout
-                </motion.button>
-              </>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={logout}
+                style={{
+                  marginLeft: "0.25rem",
+                  padding: "0.5rem 0.95rem",
+                  background: "rgba(231,76,60,0.08)",
+                  border: "1.5px solid rgba(231,76,60,0.35)",
+                  color: "#E74C3C",
+                  borderRadius: "9999px",
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                }}
+              >
+                <LogOut size={14} />
+                Logout{firstName ? `, ${firstName}` : ""}
+              </motion.button>
             ) : (
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Link
@@ -177,7 +171,7 @@ export default function PublicHeader() {
 
           {/* Mobile nav — just the hamburger. All links + profile/logout live in the
               menu, and the bottom nav covers quick navigation. Keeps the bar uncluttered. */}
-          <div className="show-mobile" style={{ display: "none", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+          <div className="public-header-mobile-trigger" style={{ display: "none", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setMenuOpen(!menuOpen)}
@@ -208,6 +202,7 @@ export default function PublicHeader() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
+            className="public-mobile-menu"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -269,7 +264,6 @@ export default function PublicHeader() {
                       WebkitTapHighlightColor: "transparent",
                     }}
                   >
-                    <Zap size={18} />
                     My Dashboard{firstName ? ` (${firstName})` : ""}
                   </Link>
                   <button
@@ -331,12 +325,33 @@ export default function PublicHeader() {
       </AnimatePresence>
 
       <style>{`
+        .public-header-desktop-nav { display: flex !important; }
+        .public-header-mobile-trigger { display: none !important; }
         @media (max-width: 768px) {
-          .hidden-mobile { display: none !important; }
-          .show-mobile   { display: flex !important; }
+          .public-header-inner {
+            height: 58px !important;
+            padding: 0 0.75rem !important;
+            max-width: 100vw !important;
+          }
+          .public-header-desktop-nav { display: none !important; }
+          .public-header-mobile-trigger { display: flex !important; }
+          .public-header-logo-mark {
+            width: 34px !important;
+            height: 34px !important;
+          }
+          .public-header-brand-title {
+            font-size: 0.82rem !important;
+          }
+          .public-header-brand-subtitle {
+            font-size: 0.48rem !important;
+            letter-spacing: 0.04em !important;
+          }
+          .public-mobile-menu {
+            top: 58px !important;
+          }
         }
         @media (min-width: 769px) {
-          .show-mobile { display: none !important; }
+          .public-header-mobile-trigger { display: none !important; }
         }
       `}</style>
     </>

@@ -18,6 +18,10 @@ interface FoundProfile {
   lands_count: number;
 }
 
+type OtpRequestData =
+  | { mode?: "sms"; sent: true }
+  | { mode: "phone-only"; profile: FoundProfile };
+
 function generateInitials(name: string): string {
   const parts = name.trim().split(" ");
   if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
@@ -53,7 +57,7 @@ const inputStyle = (error?: boolean): React.CSSProperties => ({
   flex: 1, padding: "0.875rem 1rem", borderRadius: 12,
   border: `1.5px solid ${error ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.12)"}`,
   background: "rgba(255,255,255,0.05)", color: "white", fontSize: "1.05rem",
-  outline: "none", letterSpacing: "0.05em",
+  outline: "none", letterSpacing: "0.05em", minWidth: 0, width: "100%",
 });
 
 const primaryBtn = (disabled: boolean): React.CSSProperties => ({
@@ -93,7 +97,14 @@ export default function LoginPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: fullPhone }),
       });
-      if (!res.ok) { setError("Something went wrong. Please try again."); return; }
+      const json = await res.json() as { data?: OtpRequestData; error?: string };
+      if (!res.ok) { setError(json.error ?? "Something went wrong. Please try again."); return; }
+      if (json.data?.mode === "phone-only") {
+        setProfile(json.data.profile);
+        setInfo("SMS is not connected yet, so we matched your registered phone for now.");
+        setStep("confirm");
+        return;
+      }
       setInfo("If this number is registered, a 6-digit code was sent by SMS.");
       setStep("code");
     } catch {
@@ -123,6 +134,7 @@ export default function LoginPage() {
     if (!profile) return;
     sessionStorage.setItem("sphere_profile_id", profile.id);
     sessionStorage.setItem("sphere_profile_name", profile.name);
+    window.dispatchEvent(new Event("sphere-auth-change"));
     router.push("/dashboard");
   }
 
@@ -149,19 +161,19 @@ export default function LoginPage() {
           {step === "phone" && (
             <motion.div key="phone" initial={{ x: 40 }} animate={{ x: 0 }} exit={{ x: -40 }} transition={{ duration: 0.3 }}>
               <form onSubmit={requestCode}>
-                <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 24, padding: "2rem", marginBottom: "1.25rem" }}>
+                <div className="login-panel" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 24, padding: "2rem", marginBottom: "1.25rem", overflow: "hidden" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.875rem" }}>
                     <Phone size={13} /> Parent Phone Number
                   </label>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <select value={prefix} onChange={e => setPrefix(e.target.value)} style={{ background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)", borderRadius: 12, color: "white", padding: "0.875rem 0.75rem", fontSize: "0.95rem", outline: "none", cursor: "pointer", flexShrink: 0 }}>
+                  <div className="phone-row" style={{ display: "flex", gap: "0.5rem", minWidth: 0 }}>
+                    <select value={prefix} onChange={e => setPrefix(e.target.value)} style={{ background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)", borderRadius: 12, color: "white", padding: "0.875rem 0.75rem", fontSize: "0.95rem", outline: "none", cursor: "pointer", flex: "0 0 5.5rem", minWidth: 0 }}>
                       <option value="+20">+20</option><option value="+1">+1</option><option value="+44">+44</option><option value="+971">+971</option><option value="+966">+966</option>
                     </select>
                     <input type="tel" value={phone} onChange={e => { setPhone(e.target.value); setError(""); }} placeholder="1XX XXX XXXX" autoFocus style={inputStyle(!!error)} />
                   </div>
                   {error && <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.6rem" }}>{error}</p>}
                 </div>
-                <motion.button type="submit" disabled={loading || !phone.trim()} whileTap={{ scale: 0.97 }} style={primaryBtn(loading || !phone.trim())}>
+                <motion.button className="login-submit-button" type="submit" disabled={loading || !phone.trim()} whileTap={{ scale: 0.97 }} style={primaryBtn(loading || !phone.trim())}>
                   {loading ? "Sending code…" : (<>Send Verification Code <ArrowRight size={20} /></>)}
                 </motion.button>
               </form>
@@ -198,6 +210,11 @@ export default function LoginPage() {
             <motion.div key="confirm" initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ x: -40 }} transition={{ duration: 0.35, type: "spring", stiffness: 250, damping: 24 }}>
               <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,107,71,0.25)", borderRadius: 24, padding: "2rem", textAlign: "center", marginBottom: "1rem" }}>
                 <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.8rem", marginBottom: "1.25rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>Verified — is this you?</p>
+                {info && (
+                  <p style={{ color: "rgba(116,168,50,0.92)", fontSize: "0.8rem", margin: "-0.6rem 0 1.25rem", lineHeight: 1.5 }}>
+                    {info}
+                  </p>
+                )}
                 <div style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, var(--color-sphere-coral), var(--color-sphere-gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "0 auto 1rem", boxShadow: "0 0 40px rgba(255,107,71,0.4)" }}>{generateInitials(profile.name)}</div>
                 <h2 style={{ fontSize: "1.6rem", fontWeight: 900, color: "white", margin: "0 0 0.5rem" }}>{profile.name}</h2>
                 <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", marginTop: "0.75rem" }}>
@@ -221,6 +238,37 @@ export default function LoginPage() {
           <Link href="/" style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.8rem", textDecoration: "none" }}>← Back to The Sphere home</Link>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          .login-panel {
+            padding: 1.25rem !important;
+            border-radius: 18px !important;
+          }
+
+          .phone-row {
+            gap: 0.4rem !important;
+          }
+
+          .phone-row select {
+            flex-basis: 4.8rem !important;
+            padding-left: 0.55rem !important;
+            padding-right: 0.45rem !important;
+          }
+
+          .login-submit-button {
+            font-size: 0.92rem !important;
+            padding: 0.95rem 0.75rem !important;
+            gap: 0.35rem !important;
+          }
+
+          .login-submit-button svg {
+            width: 18px !important;
+            height: 18px !important;
+            flex-shrink: 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
