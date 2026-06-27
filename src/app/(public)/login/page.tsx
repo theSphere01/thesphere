@@ -101,12 +101,11 @@ export default function LoginPage() {
       if (!res.ok) { setError(json.error ?? "Something went wrong. Please try again."); return; }
       if (json.data?.mode === "phone-only") {
         setProfile(json.data.profile);
-        setInfo("SMS is not connected yet, so we matched your registered phone for now.");
+        setInfo("No code needed. We found the profile linked to this phone.");
         setStep("confirm");
         return;
       }
-      setInfo("If this number is registered, a 6-digit code was sent by SMS.");
-      setStep("code");
+      setError("Phone login is direct now. Please try again.");
     } catch {
       setError("Connection error — please try again.");
     } finally { setLoading(false); }
@@ -152,7 +151,7 @@ export default function LoginPage() {
             <div style={{ display: "inline-block", background: "rgba(255,107,71,0.12)", border: "1px solid rgba(255,107,71,0.3)", borderRadius: 999, padding: "0.3rem 1rem", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-sphere-coral)", marginBottom: "0.75rem" }}>The Sphere</div>
             <h1 style={{ fontSize: "clamp(1.8rem, 7vw, 2.6rem)", fontWeight: 900, lineHeight: 1.05, background: "linear-gradient(135deg, var(--color-sphere-coral) 0%, var(--color-sphere-gold) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", margin: "0 0 0.4rem" }}>Welcome Back!</h1>
             <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.95rem" }}>
-              {step === "code" ? "Enter the code we sent you" : "Verify your phone to access your profile"}
+              {step === "code" ? "Enter the code we sent you" : "Enter your registered phone to open your profile"}
             </p>
           </div>
         </motion.div>
@@ -174,11 +173,11 @@ export default function LoginPage() {
                   {error && <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.6rem" }}>{error}</p>}
                 </div>
                 <motion.button className="login-submit-button" type="submit" disabled={loading || !phone.trim()} whileTap={{ scale: 0.97 }} style={primaryBtn(loading || !phone.trim())}>
-                  {loading ? "Sending code…" : (<>Send Verification Code <ArrowRight size={20} /></>)}
+                  {loading ? "Opening profile..." : (<>Open Profile <ArrowRight size={20} /></>)}
                 </motion.button>
               </form>
               <div style={{ textAlign: "center", marginTop: "1.5rem", color: "rgba(255,255,255,0.4)", fontSize: "0.82rem", lineHeight: 1.6 }}>
-                Saved your profile link from registration? Just open it — no code needed.
+                Use the parent phone number from registration. No OTP code is needed.
                 <br />
                 <Link href="/register" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "underline", textUnderlineOffset: 3 }}>First time here? Register</Link>
               </div>
@@ -209,7 +208,7 @@ export default function LoginPage() {
           {step === "confirm" && profile && (
             <motion.div key="confirm" initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ x: -40 }} transition={{ duration: 0.35, type: "spring", stiffness: 250, damping: 24 }}>
               <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,107,71,0.25)", borderRadius: 24, padding: "2rem", textAlign: "center", marginBottom: "1rem" }}>
-                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.8rem", marginBottom: "1.25rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>Verified — is this you?</p>
+                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.8rem", marginBottom: "1.25rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>Profile found - is this you?</p>
                 {info && (
                   <p style={{ color: "rgba(116,168,50,0.92)", fontSize: "0.8rem", margin: "-0.6rem 0 1.25rem", lineHeight: 1.5 }}>
                     {info}
