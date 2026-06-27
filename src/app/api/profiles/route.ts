@@ -44,28 +44,39 @@ const MOCK_PROFILES: Profile[] = [
 export async function GET(req: NextRequest) {
   try {
     await requireStaff();
-    const search = req.nextUrl.searchParams.get("search");
+    const search = (req.nextUrl.searchParams.get("search") ?? req.nextUrl.searchParams.get("q") ?? "").trim();
+    const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get("limit") ?? 50), 1), 100);
 
     if (!hasSupabase()) {
       let results = MOCK_PROFILES;
       if (search) {
         const q = search.toLowerCase();
         results = MOCK_PROFILES.filter(
-          p => p.name.toLowerCase().includes(q) || (p.parent_name ?? "").toLowerCase().includes(q)
+          p =>
+            p.name.toLowerCase().includes(q) ||
+            (p.parent_name ?? "").toLowerCase().includes(q) ||
+            (p.parent_phone ?? "").toLowerCase().includes(q)
         );
       }
-      return NextResponse.json({ data: results });
+      return NextResponse.json({ data: results.slice(0, limit) });
     }
 
     const supabase = createAdminClient();
     let query = supabase
       .from("profiles")
-      .select("id, name, age, avatar_url, total_points, visit_count, current_streak, created_at")
+      .select("id, name, age, avatar_url, parent_name, parent_phone, total_points, season_points, visit_count, current_streak, lands_visited, created_at")
       .order("total_points", { ascending: false })
-      .limit(50);
+      .limit(limit);
 
     if (search) {
-      query = query.ilike("name", `%${search}%`);
+      const safeSearch = search.replace(/[%,]/g, "");
+      query = query.or(
+        [
+          `name.ilike.%${safeSearch}%`,
+          `parent_name.ilike.%${safeSearch}%`,
+          `parent_phone.ilike.%${safeSearch}%`,
+        ].join(",")
+      );
     }
 
     const { data, error } = await query;

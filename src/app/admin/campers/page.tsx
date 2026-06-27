@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ExternalLink, PlusCircle, MinusCircle, ChevronRight } from "lucide-react";
+import { Search, ExternalLink, PlusCircle, MinusCircle, ChevronRight, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { formatPoints } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
@@ -18,11 +18,13 @@ export default function CampersPage() {
   const [loading, setLoading] = useState(false);
   const [adjusting, setAdjusting] = useState<{ id: string; delta: number } | null>(null);
   const [adjustMsg, setAdjustMsg] = useState<Record<string, string>>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteMsg, setDeleteMsg] = useState("");
 
   const fetchCampers = useCallback(async (q: string) => {
     setLoading(true);
     try {
-      const url = `/api/profiles?q=${encodeURIComponent(q)}&limit=50`;
+      const url = `/api/profiles?search=${encodeURIComponent(q)}&limit=50`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -65,6 +67,31 @@ export default function CampersPage() {
     }
   }
 
+  async function deleteCamper(camper: CamperRow) {
+    const confirmed = window.confirm(
+      `Delete ${camper.name}? This removes the camper profile, wristband, sessions, points log, badges, discounts, and leaderboard entry.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(camper.id);
+    setDeleteMsg("");
+    try {
+      const res = await fetch(`/api/profiles/${camper.id}`, { method: "DELETE" });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(payload.error ?? "Could not delete camper.");
+      }
+
+      setCampers(prev => prev.filter(c => c.id !== camper.id));
+      setDeleteMsg(`${camper.name} deleted.`);
+      setTimeout(() => setDeleteMsg(""), 2500);
+    } catch (err) {
+      setDeleteMsg(err instanceof Error ? err.message : "Could not delete camper.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   const formatDate = (str: string) => new Date(str).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
   return (
@@ -86,6 +113,12 @@ export default function CampersPage() {
           style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}
         />
       </div>
+
+      {deleteMsg && (
+        <p className="mb-4 text-sm font-semibold" style={{ color: deleteMsg.includes("deleted") ? "#22c55e" : "#ef4444" }}>
+          {deleteMsg}
+        </p>
+      )}
 
       {/* Table */}
       <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -132,6 +165,11 @@ export default function CampersPage() {
                 {camper.parent_name && (
                   <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
                     Parent: {camper.parent_name}
+                  </div>
+                )}
+                {camper.parent_phone && (
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Phone: {camper.parent_phone}
                   </div>
                 )}
               </div>
@@ -202,6 +240,15 @@ export default function CampersPage() {
                   style={{ color: "rgba(255,255,255,0.4)" }}>
                   <ChevronRight size={16} />
                 </Link>
+                <button
+                  onClick={() => deleteCamper(camper)}
+                  disabled={deletingId === camper.id}
+                  title="Delete camper"
+                  className="p-1.5 rounded-lg hover:bg-red-500/15 transition-colors disabled:opacity-50"
+                  style={{ color: "#ef4444" }}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </motion.div>
           ))}
