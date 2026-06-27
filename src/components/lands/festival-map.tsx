@@ -475,7 +475,7 @@ export default function FestivalMap({
   const challengeMap = Object.fromEntries(MOCK_CHALLENGES.map((c) => [c.land_slug, c]));
   const effectiveViewMode = forceMap ? "map" : viewMode;
   const mapMinHeight = compact ? (isMobile ? 500 : 560) : (isMobile ? 680 : 800);
-  const blobScale = isMobile ? 0.72 : 1;
+  const blobScale = isMobile ? 0.64 : 1;
 
   function getLandPosition(slug: string) {
     const pos = LAND_POSITIONS[slug];
