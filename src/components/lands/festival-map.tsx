@@ -50,6 +50,9 @@ const LAND_POSITIONS: Record<string, { x: string; y: string }> = {
   "handmade-land":  { x: "78%", y: "81%" },
 };
 
+const MOBILE_BOTTOM_ROW_SLUGS = new Set(["nilco-zone", "beauty-land", "handmade-land"]);
+const MOBILE_MIDDLE_ROW_SLUGS = new Set(["gardening-land", "cooking-land", "science-land", "sports-land"]);
+
 // Organic blob shape per land (CSS border-radius shorthand)
 const BLOB_SHAPES: Record<string, string> = {
   "art-land":       "62% 38% 54% 46% / 48% 52% 42% 58%",
@@ -196,12 +199,13 @@ function LandHoverCard({ land, challenge }: { land: Land; challenge?: PlayLeague
   );
 }
 
-function LandBlob({ land, challenge, isHovered, dimmed, onHover, onLeave, onClick }: {
+function LandBlob({ land, challenge, isHovered, dimmed, onHover, onLeave, onClick, scale = 1 }: {
   land: Land; challenge?: PlayLeagueChallenge;
   isHovered: boolean; dimmed: boolean;
   onHover: () => void; onLeave: () => void; onClick: () => void;
+  scale?: number;
 }) {
-  const size = BLOB_SIZES[land.stations.length] ?? 158;
+  const size = Math.round((BLOB_SIZES[land.stations.length] ?? 158) * scale);
   const shape = BLOB_SHAPES[land.slug] ?? "60% 40% 55% 45% / 45% 55% 40% 60%";
 
   return (
@@ -271,7 +275,6 @@ function LandBlob({ land, challenge, isHovered, dimmed, onHover, onLeave, onClic
       }}>
         {land.is_active ? "● OPEN" : "○ CLOSED"}
       </div>
-
     </motion.div>
   );
 }
@@ -286,13 +289,17 @@ function PlayLeagueBanner({ count }: { count: number }) {
       style={{
         background: "linear-gradient(90deg, #B8922E 0%, #D4A843 25%, #FF6B47 55%, #D4A843 80%, #B8922E 100%)",
         backgroundSize: "200% 100%",
-        padding: "0.65rem 1.5rem",
+        padding: "0.75rem clamp(0.85rem, 3vw, 1.5rem)",
         display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem",
         flexWrap: "wrap", borderRadius: "14px 14px 0 0",
         boxShadow: "0 4px 20px rgba(212,168,67,0.35)",
       }}
     >
-      <span style={{ color: "white", fontWeight: 900, fontSize: "0.82rem", letterSpacing: "0.04em", textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+      <span style={{
+        color: "white", fontWeight: 900, fontSize: "0.82rem", letterSpacing: "0.04em",
+        textShadow: "0 1px 4px rgba(0,0,0,0.3)", textAlign: "center", lineHeight: 1.45,
+        maxWidth: 760,
+      }}>
         🏆 PLAY LEAGUE IS LIVE! Complete challenges in highlighted lands to compete.
       </span>
       <span style={{ background: "rgba(0,0,0,0.25)", color: "rgba(255,255,255,0.9)", fontSize: "0.72rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20 }}>
@@ -426,6 +433,8 @@ function LandListItem({ land, challenge, index, onClick }: { land: Land; challen
 interface FestivalMapProps {
   activeFilter?: FilterKey;
   compact?: boolean;
+  forceMap?: boolean;
+  showViewToggle?: boolean;
 }
 
 interface TooltipTarget {
@@ -435,22 +444,46 @@ interface TooltipTarget {
   y: number;
 }
 
-export default function FestivalMap({ activeFilter = "all", compact = false }: FestivalMapProps) {
+export default function FestivalMap({
+  activeFilter = "all",
+  compact = false,
+  forceMap = false,
+  showViewToggle = true,
+}: FestivalMapProps) {
   const router = useRouter();
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [tooltipTarget, setTooltipTarget] = useState<TooltipTarget | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const blobRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
+    const updateLayout = () => {
+      const mobile = window.innerWidth < 640;
+      setIsMobile(mobile);
+      if (mobile && !forceMap) setViewMode("list");
+    };
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
     setMounted(true);
-    if (typeof window !== "undefined" && window.innerWidth < 640) setViewMode("list");
-  }, []);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, [forceMap]);
 
   if (!mounted) return null;
 
   const challengeMap = Object.fromEntries(MOCK_CHALLENGES.map((c) => [c.land_slug, c]));
+  const effectiveViewMode = forceMap ? "map" : viewMode;
+  const mapMinHeight = compact ? (isMobile ? 500 : 560) : (isMobile ? 680 : 800);
+  const blobScale = isMobile ? 0.72 : 1;
+
+  function getLandPosition(slug: string) {
+    const pos = LAND_POSITIONS[slug];
+    if (!pos || !isMobile) return pos;
+    if (MOBILE_BOTTOM_ROW_SLUGS.has(slug)) return { ...pos, y: "72%" };
+    if (MOBILE_MIDDLE_ROW_SLUGS.has(slug)) return { ...pos, y: "46%" };
+    return pos;
+  }
 
   function isVisible(land: Land): boolean {
     if (activeFilter === "open")  return land.is_active;
@@ -459,12 +492,15 @@ export default function FestivalMap({ activeFilter = "all", compact = false }: F
     return true;
   }
 
+  const visibleLandsCount = LANDS.reduce((count, land) => count + (isVisible(land) ? 1 : 0), 0);
+
   return (
     <div style={{ position: "relative", borderRadius: 16, overflow: "hidden" }}>
       {/* Play League banner */}
       <PlayLeagueBanner count={MOCK_CHALLENGES.length} />
 
       {/* View toggle bar */}
+      {showViewToggle && !forceMap && (
       <div style={{
         display: "flex", gap: "0.5rem", padding: "0.65rem 1rem",
         background: "rgba(0,0,0,0.45)", borderBottom: "1px solid rgba(255,255,255,0.06)",
@@ -482,13 +518,14 @@ export default function FestivalMap({ activeFilter = "all", compact = false }: F
           </button>
         ))}
       </div>
+      )}
 
       {/* ── MAP VIEW ── */}
       <AnimatePresence mode="wait">
-        {viewMode === "map" && (
+        {effectiveViewMode === "map" && (
           <motion.div key="map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{
-              position: "relative", width: "100%", minHeight: compact ? 560 : 800, overflow: "hidden",
+              position: "relative", width: "100%", minHeight: mapMinHeight, overflow: "hidden",
               background: `
                 radial-gradient(ellipse 65% 45% at 50% 28%, rgba(72,105,62,0.42) 0%, transparent 62%),
                 radial-gradient(ellipse 82% 58% at 18% 72%, rgba(43,88,37,0.32) 0%, transparent 52%),
@@ -521,7 +558,7 @@ export default function FestivalMap({ activeFilter = "all", compact = false }: F
 
             {/* Ambient glow pools */}
             {LANDS.map((land) => {
-              const pos = LAND_POSITIONS[land.slug];
+              const pos = getLandPosition(land.slug);
               return pos ? <AmbientGlow key={land.id} land={land} pos={pos} /> : null;
             })}
 
@@ -530,7 +567,7 @@ export default function FestivalMap({ activeFilter = "all", compact = false }: F
 
             {/* Land blobs */}
             {LANDS.map((land, i) => {
-              const pos = LAND_POSITIONS[land.slug];
+              const pos = getLandPosition(land.slug);
               if (!pos) return null;
               return (
                 <motion.div key={land.id}
@@ -544,6 +581,7 @@ export default function FestivalMap({ activeFilter = "all", compact = false }: F
                     challenge={challengeMap[land.slug]}
                     isHovered={hoveredSlug === land.slug}
                     dimmed={!isVisible(land)}
+                    scale={blobScale}
                     onHover={() => {
                       const el = blobRefs.current[land.id];
                       if (el) {
@@ -565,6 +603,7 @@ export default function FestivalMap({ activeFilter = "all", compact = false }: F
             })}
 
             {/* Entrance arch marker */}
+            {!isMobile && (
             <motion.div
               initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 1.0, type: "spring", stiffness: 200, damping: 20 }}
@@ -586,11 +625,58 @@ export default function FestivalMap({ activeFilter = "all", compact = false }: F
                 ENTRANCE
               </div>
             </motion.div>
+            )}
+            {isMobile && (
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9, type: "spring", stiffness: 240, damping: 24 }}
+                style={{
+                  position: "absolute", left: 12, right: 12, bottom: 12, zIndex: 8,
+                  minHeight: 64, padding: "0.65rem 0.75rem",
+                  borderRadius: 18,
+                  display: "flex", alignItems: "center", gap: "0.7rem",
+                  background: "linear-gradient(135deg, rgba(9,24,8,0.92), rgba(26,47,26,0.82))",
+                  border: "1px solid rgba(212,168,67,0.34)",
+                  boxShadow: "0 14px 36px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(14px)",
+                }}
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.08, 1] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                  style={{
+                    width: 42, height: 42, borderRadius: "50%", flex: "0 0 auto",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "radial-gradient(ellipse at 35% 35%, #FF8A6B, #FF6B47, #E55A38)",
+                    border: "2px solid #D4A843",
+                    boxShadow: "0 0 20px rgba(255,107,71,0.48)",
+                  }}
+                >
+                  <span style={{ fontSize: "1.25rem" }}>ðŸŸ</span>
+                </motion.div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ color: "#D4A843", fontSize: "0.68rem", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                    Entrance
+                  </div>
+                  <div style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.74rem", lineHeight: 1.35, fontWeight: 600 }}>
+                    Main gate to all lands and daily challenges.
+                  </div>
+                </div>
+                <div style={{
+                  flex: "0 0 auto", color: "rgba(255,255,255,0.78)", fontSize: "0.68rem", fontWeight: 800,
+                  padding: "0.28rem 0.55rem", borderRadius: 999, background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}>
+                  {visibleLandsCount}/11
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         )}
 
         {/* ── LIST VIEW ── */}
-        {viewMode === "list" && (
+        {effectiveViewMode === "list" && (
           <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ background: "linear-gradient(158deg, #1a2f1a 0%, #091808 100%)", padding: "1.25rem", minHeight: compact ? 400 : 580 }}
           >

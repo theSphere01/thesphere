@@ -29,7 +29,7 @@ function LandListView({ filter }: { filter: FilterKey }) {
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
       gap: "0.875rem",
     }}>
       {lands.map((land) => (
@@ -109,15 +109,25 @@ export default function LandsPage() {
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 pt-10 pb-6 text-center">
         <h1
-          className="text-5xl md:text-6xl font-black mb-3"
-          style={{ color: "var(--color-sphere-coral)", animation: "slideUp 0.5s ease forwards" }}
+          className="text-4xl sm:text-5xl md:text-6xl font-black mb-3 mx-auto"
+          style={{
+            color: "var(--color-sphere-coral)",
+            animation: "slideUp 0.5s ease forwards",
+            lineHeight: 1.02,
+            maxWidth: "720px",
+          }}
         >
           Explore The Sphere
         </h1>
 
         <p
-          className="text-lg md:text-xl mb-2"
-          style={{ color: "var(--color-sphere-gold)", animation: "slideUp 0.5s ease 0.12s forwards" }}
+          className="text-base sm:text-lg md:text-xl mb-2 mx-auto"
+          style={{
+            color: "var(--color-sphere-gold)",
+            animation: "slideUp 0.5s ease 0.12s forwards",
+            maxWidth: "620px",
+            lineHeight: 1.45,
+          }}
         >
           11 Worlds of Adventure — Where will you go first?
         </p>
@@ -137,7 +147,7 @@ export default function LandsPage() {
               <button
                 key={f.key}
                 onClick={() => setActiveFilter(f.key)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all tap-target"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-semibold transition-all tap-target"
                 style={isActive
                   ? {
                       background: "var(--color-sphere-coral)",
@@ -208,10 +218,10 @@ export default function LandsPage() {
               boxShadow: "0 24px 80px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.3)",
               border: "2px solid rgba(255,255,255,0.08)",
             }}>
-              <FestivalMap activeFilter={activeFilter} />
+              <FestivalMap activeFilter={activeFilter} forceMap showViewToggle={false} />
             </div>
             <p className="text-center mt-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              Tap any zone to enter that land
+              Live land map
             </p>
           </>
         )}
