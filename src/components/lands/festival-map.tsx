@@ -52,6 +52,19 @@ const LAND_POSITIONS: Record<string, { x: string; y: string }> = {
 
 const MOBILE_BOTTOM_ROW_SLUGS = new Set(["nilco-zone", "beauty-land", "handmade-land"]);
 const MOBILE_MIDDLE_ROW_SLUGS = new Set(["gardening-land", "cooking-land", "science-land", "sports-land"]);
+const MOBILE_LAND_LABELS: Record<string, string> = {
+  "art-land": "Art",
+  "fashion-land": "Fashion",
+  "cooking-land": "Cooking",
+  "science-land": "Science",
+  "lego-building": "Lego",
+  "vr-land": "VR",
+  "sports-land": "Sports",
+  "gardening-land": "Garden",
+  "nilco-zone": "Nilco",
+  "beauty-land": "Beauty",
+  "handmade-land": "Handmade",
+};
 
 // Organic blob shape per land (CSS border-radius shorthand)
 const BLOB_SHAPES: Record<string, string> = {
@@ -207,6 +220,8 @@ function LandBlob({ land, challenge, isHovered, dimmed, onHover, onLeave, onClic
 }) {
   const size = Math.round((BLOB_SIZES[land.stations.length] ?? 158) * scale);
   const shape = BLOB_SHAPES[land.slug] ?? "60% 40% 55% 45% / 45% 55% 40% 60%";
+  const isSmallMap = scale < 0.8;
+  const displayName = isSmallMap ? (MOBILE_LAND_LABELS[land.slug] ?? land.name) : land.name;
 
   return (
     <motion.div
@@ -252,17 +267,19 @@ function LandBlob({ land, challenge, isHovered, dimmed, onHover, onLeave, onClic
 
       {/* Land name */}
       <span style={{
-        color: "white", fontWeight: 900, fontSize: size > 120 ? "0.7rem" : "0.62rem",
+        color: "white", fontWeight: 900, fontSize: isSmallMap ? "0.58rem" : size > 120 ? "0.7rem" : "0.62rem",
         textTransform: "uppercase", textAlign: "center", letterSpacing: "0.07em",
-        marginTop: "0.4rem", textShadow: "0 1px 6px rgba(0,0,0,0.65)", lineHeight: 1.2, maxWidth: "80%",
+        marginTop: "0.4rem", textShadow: "0 1px 6px rgba(0,0,0,0.65)", lineHeight: 1.12, maxWidth: isSmallMap ? "92%" : "80%",
       }}>
-        {land.name}
+        {displayName}
       </span>
 
       {/* Station count */}
-      <span style={{ color: "rgba(255,255,255,0.68)", fontSize: "0.58rem", marginTop: "0.2rem", fontWeight: 600 }}>
-        {land.stations.length} stations
-      </span>
+      {!isSmallMap && (
+        <span style={{ color: "rgba(255,255,255,0.68)", fontSize: "0.58rem", marginTop: "0.2rem", fontWeight: 600 }}>
+          {land.stations.length} stations
+        </span>
+      )}
 
       {/* Open / Closed badge */}
       <div style={{
