@@ -480,6 +480,7 @@ export default function FestivalMap({
   function getLandPosition(slug: string) {
     const pos = LAND_POSITIONS[slug];
     if (!pos || !isMobile) return pos;
+    if (slug === "sports-land") return { ...pos, x: "79%", y: "46%" };
     if (MOBILE_BOTTOM_ROW_SLUGS.has(slug)) return { ...pos, y: "72%" };
     if (MOBILE_MIDDLE_ROW_SLUGS.has(slug)) return { ...pos, y: "46%" };
     return pos;
