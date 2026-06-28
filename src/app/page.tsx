@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import SphereGate from "@/components/sphere/sphere-gate";
 import LandsOrbit from "@/components/sphere/lands-orbit";
@@ -9,6 +9,7 @@ import PublicHeader from "@/components/layout/public-header";
 import Footer from "@/components/layout/footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
+import { DEFAULT_HOME_GALLERY_PHOTOS, parseHomeGalleryPhotos } from "@/lib/home-gallery";
 
 const STEPS = [
   {
@@ -59,10 +60,28 @@ export default function HomePage() {
   const landsRef  = useRef(null);
   const stepsRef  = useRef(null);
   const lbRef     = useRef(null);
+  const [galleryPhotos, setGalleryPhotos] = useState(DEFAULT_HOME_GALLERY_PHOTOS);
 
   const landsInView = useInView(landsRef, { once: true, margin: "-80px" });
   const stepsInView = useInView(stepsRef, { once: true, margin: "-80px" });
   const lbInView    = useInView(lbRef,    { once: true, margin: "-80px" });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setGalleryPhotos(parseHomeGalleryPhotos(json.data?.home_gallery_photos));
+      })
+      .catch(() => {
+        if (!cancelled) setGalleryPhotos(DEFAULT_HOME_GALLERY_PHOTOS);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <>
@@ -72,6 +91,7 @@ export default function HomePage() {
       <SphereGate />
 
       {/* ── Photo Strip: The Real Sphere ── */}
+      {galleryPhotos.length > 0 && (
       <section style={{
         background: "#1a1a2e",
         padding: "3rem 0 2.5rem",
@@ -102,17 +122,9 @@ export default function HomePage() {
             scrollbarWidth: "none",
             msOverflowStyle: "none",
           }}>
-            {[
-              { src: "/photos/sphere-arch-hero.jpeg",   alt: "The Sphere arch entrance" },
-              { src: "/photos/sphere-promo.jpeg",        alt: "The Sphere — Summer Day Camps" },
-              { src: "/photos/sphere-arch-aerial.jpeg",  alt: "Aerial view of The Sphere" },
-              { src: "/photos/sphere-pathway.jpeg",      alt: "Colourful pathways outside The Sphere" },
-              { src: "/photos/sphere-entrance.jpeg",     alt: "The Sphere entrance door" },
-              { src: "/photos/sphere-team.jpeg",         alt: "The Sphere team" },
-              { src: "/photos/sphere-interior.jpeg",     alt: "Inside The Sphere — activities" },
-            ].map((photo, i) => (
+            {galleryPhotos.map((photo, i) => (
               <motion.div
-                key={i}
+                key={photo.id}
                 initial={{ scale: 0.95 }}
                 whileInView={{ scale: 1 }}
                 viewport={{ once: true, margin: "-40px" }}
@@ -149,6 +161,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Section 2: 11 Worlds ── */}
       <section

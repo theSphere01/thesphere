@@ -35,7 +35,7 @@ function LandListView({ filter, openLandIds }: { filter: FilterKey; openLandIds:
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
       gap: "0.875rem",
     }}>
       {lands.map((land) => (
@@ -44,15 +44,15 @@ function LandListView({ filter, openLandIds }: { filter: FilterKey; openLandIds:
             style={{
               background: `linear-gradient(135deg, ${land.theme_color}28 0%, ${land.theme_color}14 100%)`,
               border: `2px solid ${isOpenToday(land, openLandIds) ? land.theme_color + "55" : "rgba(148,163,184,0.22)"}`,
-              borderRadius: 20,
-              padding: "1.25rem 1rem",
+              borderRadius: 18,
+              padding: "1rem",
               display: "flex",
-              flexDirection: "column",
+              flexDirection: "row",
               alignItems: "center",
-              gap: "0.5rem",
-              textAlign: "center",
-              minHeight: 130,
-              justifyContent: "center",
+              gap: "0.85rem",
+              textAlign: "left",
+              minHeight: 104,
+              justifyContent: "flex-start",
               boxShadow: `0 4px 20px ${land.theme_color}20`,
               cursor: "pointer",
               opacity: isOpenToday(land, openLandIds) ? 1 : 0.55,
@@ -62,23 +62,27 @@ function LandListView({ filter, openLandIds }: { filter: FilterKey; openLandIds:
             onTouchStart={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "scale(0.96)"; }}
             onTouchEnd={(e)   => { (e.currentTarget as HTMLDivElement).style.transform = "scale(1)"; }}
           >
-            <div style={{ fontSize: "2.25rem", lineHeight: 1 }}>{land.icon_emoji}</div>
-            <div style={{ fontWeight: 800, fontSize: "0.88rem", color: land.theme_color, lineHeight: 1.2 }}>
-              {land.name}
-            </div>
-            <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>
-              Ages {land.age_min}–{land.age_max}
-            </div>
-            <div style={{
-              fontSize: "0.68rem",
-              background: isOpenToday(land, openLandIds) ? `${land.theme_color}22` : "rgba(148,163,184,0.12)",
-              color: isOpenToday(land, openLandIds) ? land.theme_color : "rgba(255,255,255,0.45)",
-              padding: "2px 8px",
-              borderRadius: 20,
-              fontWeight: 700,
-              border: `1px solid ${isOpenToday(land, openLandIds) ? land.theme_color + "40" : "rgba(148,163,184,0.16)"}`,
-            }}>
-              {isOpenToday(land, openLandIds) ? `${land.stations.length} activities` : "Closed today"}
+            <div style={{ fontSize: "2.3rem", lineHeight: 1, flex: "0 0 auto" }}>{land.icon_emoji}</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontWeight: 900, fontSize: "0.98rem", color: land.theme_color, lineHeight: 1.2 }}>
+                {land.name}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.46)", fontWeight: 650, marginTop: 3 }}>
+                Ages {land.age_min}–{land.age_max} · {land.stations.length} activities
+              </div>
+              <div style={{
+                display: "inline-flex",
+                marginTop: 8,
+                fontSize: "0.68rem",
+                background: isOpenToday(land, openLandIds) ? `${land.theme_color}22` : "rgba(148,163,184,0.12)",
+                color: isOpenToday(land, openLandIds) ? land.theme_color : "rgba(255,255,255,0.45)",
+                padding: "2px 8px",
+                borderRadius: 20,
+                fontWeight: 800,
+                border: `1px solid ${isOpenToday(land, openLandIds) ? land.theme_color + "40" : "rgba(148,163,184,0.16)"}`,
+              }}>
+                {isOpenToday(land, openLandIds) ? "Open today" : "Closed today"}
+              </div>
             </div>
           </div>
         </Link>
@@ -94,9 +98,19 @@ export default function LandsPage() {
   const [openLandIds, setOpenLandIds] = useState<string[] | null>(null);
 
   useEffect(() => {
-    // Default to map on desktop, list on mobile
-    if (window.innerWidth >= 640) setView("map");
+    let lastMobile: boolean | null = null;
+
+    function syncInitialView() {
+      const mobile = window.innerWidth < 640;
+      if (mobile === lastMobile) return;
+      lastMobile = mobile;
+      setView(mobile ? "list" : "map");
+    }
+
+    syncInitialView();
+    window.addEventListener("resize", syncInitialView);
     setMounted(true);
+    return () => window.removeEventListener("resize", syncInitialView);
   }, []);
 
   useEffect(() => {
@@ -233,9 +247,9 @@ export default function LandsPage() {
         ) : (
           <>
             <div style={{
-              borderRadius: "24px",
+              borderRadius: "20px",
               overflow: "hidden",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.3)",
+              boxShadow: "0 18px 58px rgba(0,0,0,0.46), 0 8px 28px rgba(0,0,0,0.28)",
               border: "2px solid rgba(255,255,255,0.08)",
             }}>
               <FestivalMap activeFilter={activeFilter} forceMap showViewToggle={false} openLandIds={openLandIds} />

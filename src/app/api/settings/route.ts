@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import { handleRouteError } from "@/lib/auth/handle-error";
+import { DEFAULT_HOME_GALLERY_PHOTOS, serializeHomeGalleryPhotos } from "@/lib/home-gallery";
 
 const DEFAULTS: Record<string, string> = {
   home_hero_photo: "/photos/sphere-arch-hero.jpeg",
   home_transition_photo: "/images/sphere-brand-pattern.jpeg",
+  home_gallery_photos: serializeHomeGalleryPhotos(DEFAULT_HOME_GALLERY_PHOTOS),
 };
 
 export async function GET() {

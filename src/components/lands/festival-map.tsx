@@ -493,8 +493,8 @@ export default function FestivalMap({
 
   const challengeMap = Object.fromEntries(MOCK_CHALLENGES.map((c) => [c.land_slug, c]));
   const effectiveViewMode = forceMap ? "map" : viewMode;
-  const mapMinHeight = compact ? (isMobile ? 500 : 560) : (isMobile ? 680 : 800);
-  const blobScale = isMobile ? 0.64 : 1;
+  const mapMinHeight = compact ? (isMobile ? 470 : 560) : (isMobile ? 610 : 800);
+  const blobScale = isMobile ? 0.56 : 1;
   const runtimeLands = LANDS.map((land) => ({
     ...land,
     is_active: openLandIds ? openLandIds.includes(land.id) : land.is_active,
@@ -503,10 +503,10 @@ export default function FestivalMap({
   function getLandPosition(slug: string) {
     const pos = LAND_POSITIONS[slug];
     if (!pos || !isMobile) return pos;
-    if (slug === "sports-land") return { ...pos, x: "79%", y: "46%" };
-    if (MOBILE_BOTTOM_ROW_SLUGS.has(slug)) return { ...pos, y: "72%" };
-    if (MOBILE_MIDDLE_ROW_SLUGS.has(slug)) return { ...pos, y: "46%" };
-    return pos;
+    if (slug === "sports-land") return { ...pos, x: "78%", y: "42%" };
+    if (MOBILE_BOTTOM_ROW_SLUGS.has(slug)) return { ...pos, y: "66%" };
+    if (MOBILE_MIDDLE_ROW_SLUGS.has(slug)) return { ...pos, y: "42%" };
+    return { ...pos, y: "14%" };
   }
 
   function isVisible(land: Land): boolean {
@@ -656,9 +656,9 @@ export default function FestivalMap({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9, type: "spring", stiffness: 240, damping: 24 }}
                 style={{
-                  position: "absolute", left: 12, right: 12, bottom: 12, zIndex: 8,
-                  minHeight: 64, padding: "0.65rem 0.75rem",
-                  borderRadius: 18,
+                  position: "absolute", left: 10, right: 10, bottom: 10, zIndex: 8,
+                  minHeight: 56, padding: "0.55rem 0.65rem",
+                  borderRadius: 16,
                   display: "flex", alignItems: "center", gap: "0.7rem",
                   background: "linear-gradient(135deg, rgba(9,24,8,0.92), rgba(26,47,26,0.82))",
                   border: "1px solid rgba(212,168,67,0.34)",
@@ -670,7 +670,7 @@ export default function FestivalMap({
                   animate={{ scale: [1, 1.08, 1] }}
                   transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                   style={{
-                    width: 42, height: 42, borderRadius: "50%", flex: "0 0 auto",
+                    width: 38, height: 38, borderRadius: "50%", flex: "0 0 auto",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     background: "radial-gradient(ellipse at 35% 35%, #FF8A6B, #FF6B47, #E55A38)",
                     border: "2px solid #D4A843",
@@ -683,7 +683,7 @@ export default function FestivalMap({
                   <div style={{ color: "#D4A843", fontSize: "0.68rem", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase" }}>
                     Entrance
                   </div>
-                  <div style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.74rem", lineHeight: 1.35, fontWeight: 600 }}>
+                  <div style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.7rem", lineHeight: 1.3, fontWeight: 600 }}>
                     Main gate to all lands and daily challenges.
                   </div>
                 </div>
