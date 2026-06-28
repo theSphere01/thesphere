@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { issueWristbandToken } from "@/lib/nfc/token";
+import { normalizePhone } from "@/lib/phone";
 
 const schema = z.object({
   child_name:   z.string().min(1).max(100),
   age:          z.number().int().min(4).max(18),
   parent_name:  z.string().min(1).max(100),
-  parent_phone: z.string().min(8).max(20),
+  parent_phone: z.string().min(8).max(32),
   nfc_uid:      z.string().optional(),
 });
 
@@ -15,6 +16,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const data = schema.parse(body);
+    const parentPhone = normalizePhone(data.parent_phone);
+    if (!parentPhone) {
+      return NextResponse.json({ error: "Valid phone number required" }, { status: 400 });
+    }
     const supabase = createAdminClient();
 
     const { data: profile, error: profileError } = await supabase
@@ -23,7 +28,7 @@ export async function POST(req: NextRequest) {
         name:          data.child_name,
         age:           data.age,
         parent_name:   data.parent_name,
-        parent_phone:  data.parent_phone,
+        parent_phone:  parentPhone,
         total_points:  0,
         season_points: 0,
         visit_count:   0,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Menu, X, LogIn, LogOut } from "lucide-react";
+import { AUTH_CHANGE_EVENT, clearActiveProfileSession, getActiveProfileSession } from "@/lib/profile-session";
 
 // Camper / parent facing only. Staff & Admin live discreetly in the footer.
 const NAV_LINKS = [
@@ -19,16 +20,17 @@ function useLoggedInProfile() {
 
   useEffect(() => {
     function readSession() {
-      setProfileId(sessionStorage.getItem("sphere_profile_id"));
-      setProfileName(sessionStorage.getItem("sphere_profile_name"));
+      const activeProfile = getActiveProfileSession();
+      setProfileId(activeProfile?.id ?? null);
+      setProfileName(activeProfile?.name ?? null);
     }
 
     readSession();
     window.addEventListener("storage", readSession);
-    window.addEventListener("sphere-auth-change", readSession);
+    window.addEventListener(AUTH_CHANGE_EVENT, readSession);
     return () => {
       window.removeEventListener("storage", readSession);
-      window.removeEventListener("sphere-auth-change", readSession);
+      window.removeEventListener(AUTH_CHANGE_EVENT, readSession);
     };
   }, [pathname]);
 
@@ -38,13 +40,7 @@ function useLoggedInProfile() {
 // Clears the parent session and returns home. Hard navigation so every
 // auth-aware piece of UI re-reads the (now empty) session storage.
 function logout() {
-  try {
-    sessionStorage.removeItem("sphere_profile_id");
-    sessionStorage.removeItem("sphere_profile_name");
-    window.dispatchEvent(new Event("sphere-auth-change"));
-  } catch {
-    /* ignore */
-  }
+  clearActiveProfileSession();
   window.location.href = "/";
 }
 

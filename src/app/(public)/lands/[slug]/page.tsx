@@ -10,6 +10,7 @@ import { hexToRgba, getAgeLabel } from "@/lib/utils";
 import { getEgyptDateString } from "@/lib/dates";
 import { StationCard } from "@/components/lands/station-card";
 import { PhotoGallery } from "@/components/lands/photo-gallery";
+import { getActiveProfileSession } from "@/lib/profile-session";
 
 interface LandPageProps {
   params: Promise<{ slug: string }>;
@@ -65,7 +66,7 @@ export default function LandPage({ params }: LandPageProps) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setProfileId(sessionStorage.getItem("sphere_profile_id"));
+      setProfileId(getActiveProfileSession()?.id ?? null);
     }
 
     async function loadSchedule() {

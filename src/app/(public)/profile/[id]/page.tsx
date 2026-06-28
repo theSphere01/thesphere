@@ -7,6 +7,7 @@ import { Copy, MapPin, Zap, Trophy } from "lucide-react";
 import BadgeGrid from "@/components/badges/badge-grid";
 import { generateInitials, formatPoints, getRankColor, getRankSuffix } from "@/lib/utils";
 import type { Profile, ProfileBadge, DiscountCode } from "@/lib/types";
+import { setActiveProfileSession } from "@/lib/profile-session";
 
 interface ProfilePageData {
   profile: Profile;
@@ -79,6 +80,11 @@ export default function ProfilePage() {
     const timer = setTimeout(() => setShowWelcome(false), 4000);
     return () => clearTimeout(timer);
   }, [showWelcome]);
+
+  useEffect(() => {
+    if (!isWelcome || !data?.profile) return;
+    setActiveProfileSession({ id: data.profile.id, name: data.profile.name });
+  }, [isWelcome, data]);
 
   function copyLink() {
     if (typeof window === "undefined") return;

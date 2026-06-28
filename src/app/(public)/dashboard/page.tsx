@@ -6,10 +6,11 @@ import Link from "next/link";
 import { motion, AnimatePresence, useMotionValue, animate } from "framer-motion";
 import {
   Zap, Trophy, MapPin, Flame, Tag, Crown, Medal,
-  ChevronDown, ChevronUp, Map, User, LogOut, Copy, CalendarCheck,
+  ChevronDown, ChevronUp, Map, User, LogOut, Copy, CalendarCheck, CreditCard,
 } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/types";
 import { generateInitials, getRankColor } from "@/lib/utils";
+import { clearActiveProfileSession, getActiveProfileSession, setActiveProfileSession } from "@/lib/profile-session";
 
 interface DashboardProfile {
   id: string;
@@ -56,6 +57,17 @@ interface LandBooking {
   } | null;
 }
 
+interface PaymentSummary {
+  id: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "paid" | "failed" | "refunded" | string;
+  provider: string;
+  purpose: string;
+  description: string | null;
+  created_at: string;
+}
+
 const MILESTONES = [100, 250, 500, 1000, 2500, 5000];
 function nextMilestone(pts: number) { return MILESTONES.find(m => m > pts) ?? MILESTONES[MILESTONES.length - 1]; }
 function prevMilestone(pts: number) { const i = MILESTONES.findIndex(m => m > pts); return i <= 0 ? 0 : MILESTONES[i - 1]; }
@@ -87,6 +99,7 @@ export default function DashboardPage() {
   const [offers, setOffers] = useState<DailyOffers | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [bookings, setBookings] = useState<LandBooking[]>([]);
+  const [payments, setPayments] = useState<PaymentSummary[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [lbExpanded, setLbExpanded] = useState(false);
@@ -94,33 +107,39 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = sessionStorage.getItem("sphere_profile_id");
-    if (!stored) {
+    const activeProfile = getActiveProfileSession();
+    if (!activeProfile) {
       router.replace("/login");
       return;
     }
-    setProfileId(stored);
+    setProfileId(activeProfile.id);
   }, [router]);
 
   useEffect(() => {
     if (!profileId) return;
     async function load() {
       try {
-        const [profileRes, offersRes, lbRes, bookingsRes] = await Promise.all([
+        const [profileRes, offersRes, lbRes, bookingsRes, paymentsRes] = await Promise.all([
           fetch(`/api/profiles/${profileId}`),
           fetch(`/api/offers/today?profile_id=${profileId}`),
           fetch("/api/leaderboard?type=season"),
           fetch(`/api/bookings?profile_id=${profileId}`),
+          fetch(`/api/payments?profile_id=${profileId}`),
         ]);
-        const [profileJson, offersJson, lbJson, bookingsJson] = await Promise.all([
+        const [profileJson, offersJson, lbJson, bookingsJson, paymentsJson] = await Promise.all([
           profileRes.json() as Promise<{ data?: { profile: DashboardProfile } }>,
           offersRes.json() as Promise<{ data?: DailyOffers }>,
           lbRes.json() as Promise<{ data?: LeaderboardEntry[] }>,
           bookingsRes.json() as Promise<{ data?: LandBooking[] }>,
+          paymentsRes.json() as Promise<{ data?: PaymentSummary[] }>,
         ]);
-        if (profileJson.data?.profile) setProfile(profileJson.data.profile);
+        if (profileJson.data?.profile) {
+          setProfile(profileJson.data.profile);
+          setActiveProfileSession({ id: profileJson.data.profile.id, name: profileJson.data.profile.name });
+        }
         if (offersJson.data) setOffers(offersJson.data);
         if (bookingsJson.data) setBookings(bookingsJson.data);
+        if (paymentsJson.data) setPayments(paymentsJson.data);
         if (lbJson.data) {
           setLeaderboard(lbJson.data);
           const myEntry = lbJson.data.find(e => e.profile_id === profileId);
@@ -136,10 +155,7 @@ export default function DashboardPage() {
   }, [profileId]);
 
   function logout() {
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("sphere_profile_id");
-      sessionStorage.removeItem("sphere_profile_name");
-    }
+    clearActiveProfileSession();
     router.push("/login");
   }
 
@@ -170,6 +186,18 @@ export default function DashboardPage() {
     started: "var(--color-ws-blue)",
     completed: "var(--color-ws-green)",
     cancelled: "rgba(148,163,184,0.8)",
+  };
+  const paymentLabels: Record<string, string> = {
+    pending: "Pending",
+    paid: "Paid",
+    failed: "Failed",
+    refunded: "Refunded",
+  };
+  const paymentColors: Record<string, string> = {
+    pending: "var(--color-sphere-gold)",
+    paid: "var(--color-ws-green)",
+    failed: "#f87171",
+    refunded: "rgba(148,163,184,0.85)",
   };
 
   return (
@@ -473,6 +501,57 @@ export default function DashboardPage() {
                   </div>
                 </motion.div>
               ))}
+            </div>
+          </motion.section>
+        )}
+
+        {payments.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            style={{ marginBottom: "1.5rem" }}
+          >
+            <SectionLabel icon={<CreditCard size={13} />} label="Payments" />
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+              {payments.slice(0, 5).map((payment) => {
+                const color = paymentColors[payment.status] ?? "rgba(255,255,255,0.72)";
+                const amount = new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: payment.currency || "EGP",
+                  maximumFractionDigits: 0,
+                }).format(payment.amount);
+                return (
+                  <div
+                    key={payment.id}
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: `1px solid ${color}35`,
+                      borderRadius: 14,
+                      padding: "0.875rem 1rem",
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto",
+                      gap: "0.75rem",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: "white", fontWeight: 800, fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {payment.description || payment.purpose.replaceAll("_", " ")}
+                      </div>
+                      <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.72rem", marginTop: 3 }}>
+                        {new Date(payment.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {payment.provider}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: "white", fontWeight: 900, fontSize: "0.95rem" }}>{amount}</div>
+                      <div style={{ color, fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>
+                        {paymentLabels[payment.status] ?? payment.status}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </motion.section>
         )}

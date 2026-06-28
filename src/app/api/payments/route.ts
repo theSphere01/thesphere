@@ -15,12 +15,37 @@ const CreateSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
+const PublicListSchema = z.object({
+  profile_id: z.string().uuid(),
+  status: z.string().optional(),
+});
+
 // ── GET /api/payments?status= ──────────────────────────────
 export async function GET(req: NextRequest) {
   try {
-    await requireStaff();
     const supabase = createAdminClient();
+    const profileId = req.nextUrl.searchParams.get("profile_id");
     const status = req.nextUrl.searchParams.get("status");
+
+    if (profileId) {
+      const parsed = PublicListSchema.safeParse({ profile_id: profileId, status: status ?? undefined });
+      if (!parsed.success) {
+        return NextResponse.json({ error: "Valid profile_id is required" }, { status: 400 });
+      }
+
+      let query = supabase
+        .from("payments")
+        .select("id, amount, currency, status, provider, purpose, description, created_at, updated_at")
+        .eq("profile_id", parsed.data.profile_id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (parsed.data.status) query = query.eq("status", parsed.data.status);
+      const { data, error } = await query;
+      if (error) throw error;
+      return NextResponse.json({ data: data ?? [] });
+    }
+
+    await requireStaff();
     let query = supabase
       .from("payments")
       .select("*")

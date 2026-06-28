@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, ArrowRight, ChevronLeft, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
+import { normalizePhone } from "@/lib/phone";
+import { getActiveProfileSession, setActiveProfileSession } from "@/lib/profile-session";
 
 type Step = "phone" | "code" | "confirm";
 
@@ -20,7 +22,7 @@ interface FoundProfile {
 
 type OtpRequestData =
   | { mode?: "sms"; sent: true }
-  | { mode: "phone-only"; profile: FoundProfile };
+  | { mode: "phone-only"; profile: FoundProfile; profiles?: FoundProfile[] };
 
 function generateInitials(name: string): string {
   const parts = name.trim().split(" ");
@@ -78,10 +80,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [profile, setProfile] = useState<FoundProfile | null>(null);
+  const [profiles, setProfiles] = useState<FoundProfile[]>([]);
   const fullPhoneRef = useRef("");
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("sphere_profile_id")) {
+    if (getActiveProfileSession()) {
       router.replace("/dashboard");
     }
   }, [router]);
@@ -90,7 +93,12 @@ export default function LoginPage() {
     e.preventDefault();
     if (!phone.trim()) { setError("Please enter your phone number"); return; }
     setLoading(true); setError(""); setInfo("");
-    const fullPhone = `${prefix}${phone.trim().replace(/^0/, "")}`;
+    const fullPhone = normalizePhone(phone, prefix);
+    if (!fullPhone) {
+      setError("Please enter a valid phone number");
+      setLoading(false);
+      return;
+    }
     fullPhoneRef.current = fullPhone;
     try {
       const res = await fetch("/api/auth/otp/request", {
@@ -100,8 +108,14 @@ export default function LoginPage() {
       const json = await res.json() as { data?: OtpRequestData; error?: string };
       if (!res.ok) { setError(json.error ?? "Something went wrong. Please try again."); return; }
       if (json.data?.mode === "phone-only") {
-        setProfile(json.data.profile);
-        setInfo("No code needed. We found the profile linked to this phone.");
+        const foundProfiles = json.data.profiles?.length ? json.data.profiles : [json.data.profile];
+        setProfiles(foundProfiles);
+        setProfile(foundProfiles[0] ?? null);
+        setInfo(
+          foundProfiles.length > 1
+            ? "No code needed. Choose the profile linked to this phone."
+            : "No code needed. We found the profile linked to this phone."
+        );
         setStep("confirm");
         return;
       }
@@ -131,9 +145,7 @@ export default function LoginPage() {
 
   function handleConfirm() {
     if (!profile) return;
-    sessionStorage.setItem("sphere_profile_id", profile.id);
-    sessionStorage.setItem("sphere_profile_name", profile.name);
-    window.dispatchEvent(new Event("sphere-auth-change"));
+    setActiveProfileSession({ id: profile.id, name: profile.name });
     router.push("/dashboard");
   }
 
@@ -216,6 +228,33 @@ export default function LoginPage() {
                 )}
                 <div style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, var(--color-sphere-coral), var(--color-sphere-gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "0 auto 1rem", boxShadow: "0 0 40px rgba(255,107,71,0.4)" }}>{generateInitials(profile.name)}</div>
                 <h2 style={{ fontSize: "1.6rem", fontWeight: 900, color: "white", margin: "0 0 0.5rem" }}>{profile.name}</h2>
+                {profiles.length > 1 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", margin: "0.75rem 0 1rem" }}>
+                    {profiles.map((item) => {
+                      const selected = item.id === profile.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setProfile(item)}
+                          style={{
+                            width: "100%",
+                            borderRadius: 12,
+                            border: selected ? "1.5px solid var(--color-sphere-coral)" : "1px solid rgba(255,255,255,0.12)",
+                            background: selected ? "rgba(255,107,71,0.12)" : "rgba(255,255,255,0.04)",
+                            color: selected ? "white" : "rgba(255,255,255,0.78)",
+                            padding: "0.65rem 0.8rem",
+                            cursor: "pointer",
+                            fontWeight: 800,
+                            textAlign: "left",
+                          }}
+                        >
+                          {item.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", marginTop: "0.75rem" }}>
                   {[{ label: "Points", value: profile.total_points.toLocaleString(), icon: "⚡" }, { label: "Visits", value: String(profile.visit_count), icon: "📍" }, { label: "Lands", value: `${profile.lands_count}/11`, icon: "🗺️" }].map(s => (
                     <div key={s.label} style={{ textAlign: "center" }}>

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { handleRouteError } from "@/lib/auth/handle-error";
+import { phoneSearchVariants } from "@/lib/phone";
 
-const schema = z.object({ phone: z.string().min(8).max(20) });
+const schema = z.object({ phone: z.string().min(8).max(32) });
 
 type LoginProfile = {
   id: string;
@@ -33,28 +34,31 @@ function toLoginProfile(profile: LoginProfile) {
 export async function POST(req: NextRequest) {
   try {
     const { phone } = schema.parse(await req.json());
-    const normalized = phone.replace(/[\s\-()]/g, "");
+    const phoneVariants = phoneSearchVariants(phone);
     const supabase = createAdminClient();
 
-    const { data: profile, error } = await supabase
+    const { data: profiles, error } = await supabase
       .from("profiles")
       .select("id, name, total_points, avatar_url, current_streak, visit_count, lands_visited")
-      .or(`parent_phone.eq.${normalized},parent_phone.eq.${phone}`)
-      .limit(1)
-      .maybeSingle();
+      .in("parent_phone", phoneVariants)
+      .order("created_at", { ascending: false })
+      .limit(10);
 
     if (error) {
       throw error;
     }
 
-    if (!profile) {
+    if (!profiles?.length) {
       return NextResponse.json({ error: "No registered profile found for this phone number." }, { status: 404 });
     }
+
+    const loginProfiles = profiles.map(toLoginProfile);
 
     return NextResponse.json({
       data: {
         mode: "phone-only",
-        profile: toLoginProfile(profile),
+        profile: loginProfiles[0],
+        profiles: loginProfiles,
       },
     });
   } catch (err) {

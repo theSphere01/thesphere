@@ -5,6 +5,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { CheckCircle, Smartphone, Copy, ArrowRight, Wifi, User, Phone, Hash, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { normalizePhone } from "@/lib/phone";
+import { setActiveProfileSession } from "@/lib/profile-session";
 
 type Step = "form" | "wristband" | "success";
 
@@ -60,7 +62,7 @@ export default function RegisterPage() {
       setCountdown((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(interval);
-          router.push(`/profile/${profileId}?welcome=1`);
+          router.push("/dashboard");
           return null;
         }
         return prev - 1;
@@ -92,7 +94,7 @@ export default function RegisterPage() {
           child_name:   form.child_name.trim(),
           age:          Number(form.age),
           parent_name:  form.parent_name.trim(),
-          parent_phone: form.parent_phone.trim(),
+          parent_phone: normalizePhone(form.parent_phone),
         }),
       });
       const json = await res.json() as { data?: { id: string; name: string; token?: string }; error?: string };
@@ -103,6 +105,7 @@ export default function RegisterPage() {
       setProfileId(id);
       setToken(tk);
       setChildName(json.data!.name ?? form.child_name);
+      setActiveProfileSession({ id, name: json.data!.name ?? form.child_name });
       setStep("wristband");
 
       // Web NFC (writing the signed token to the tag) only works on Chrome for
@@ -609,14 +612,14 @@ export default function RegisterPage() {
                 {/* Auto-redirect countdown */}
                 {countdown !== null && (
                   <p style={{ color: "var(--color-text-muted)", fontSize: "0.82rem", marginBottom: "0.75rem" }}>
-                    Taking you to your profile in{" "}
+                    Taking you to your dashboard in{" "}
                     <span style={{ color: "var(--color-sphere-coral)", fontWeight: 800 }}>{countdown}</span>…
                   </p>
                 )}
 
                 {/* CTA */}
                 <Link
-                  href={profileId ? `/profile/${profileId}?welcome=1` : "/lands"}
+                  href={profileId ? "/dashboard" : "/lands"}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -631,7 +634,7 @@ export default function RegisterPage() {
                     letterSpacing: "0.04em",
                   }}
                 >
-                  Go to My Profile
+                  Go to My Dashboard
                   <ArrowRight size={18} />
                 </Link>
               </div>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Map, Trophy, Ticket, Zap } from "lucide-react";
+import { AUTH_CHANGE_EVENT, getActiveProfileSession } from "@/lib/profile-session";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -12,15 +13,15 @@ export function MobileBottomNav() {
 
   useEffect(() => {
     function readSession() {
-      setProfileId(sessionStorage.getItem("sphere_profile_id"));
+      setProfileId(getActiveProfileSession()?.id ?? null);
     }
 
     readSession();
     window.addEventListener("storage", readSession);
-    window.addEventListener("sphere-auth-change", readSession);
+    window.addEventListener(AUTH_CHANGE_EVENT, readSession);
     return () => {
       window.removeEventListener("storage", readSession);
-      window.removeEventListener("sphere-auth-change", readSession);
+      window.removeEventListener(AUTH_CHANGE_EVENT, readSession);
     };
   }, [pathname]);
 
