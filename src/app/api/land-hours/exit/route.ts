@@ -44,6 +44,17 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    await supabase
+      .from("land_bookings")
+      .update({
+        status: "completed",
+        completed_at: now,
+        updated_at: now,
+      })
+      .eq("land_hour_id", land_hour_id)
+      .eq("status", "started");
+
     return NextResponse.json({ data });
   } catch (err) {
     return handleRouteError(err);

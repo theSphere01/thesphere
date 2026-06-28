@@ -1,18 +1,27 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Star, Zap, Award } from "lucide-react";
+import { ArrowLeft, Clock, Star, Zap, Award, CalendarCheck, CheckCircle2, Lock, Loader2 } from "lucide-react";
 import { LANDS, BADGE_DEFINITIONS, DEFAULT_POINTS_CONFIG } from "@/lib/constants";
 import { hexToRgba, getAgeLabel } from "@/lib/utils";
+import { getEgyptDateString } from "@/lib/dates";
 import { StationCard } from "@/components/lands/station-card";
 import { PhotoGallery } from "@/components/lands/photo-gallery";
 
 interface LandPageProps {
   params: Promise<{ slug: string }>;
 }
+
+type BookingStatus = "booked" | "started" | "completed" | "cancelled";
+type LandBooking = {
+  id: string;
+  land_id: string;
+  booking_date: string;
+  status: BookingStatus;
+};
 
 const POINTS_ROWS = [
   { hours: 1, base: DEFAULT_POINTS_CONFIG.per_hour,                              label: "1 hour",   bonus: null },
@@ -26,6 +35,13 @@ export default function LandPage({ params }: LandPageProps) {
   const land = LANDS.find((l) => l.slug === slug);
   if (!land) notFound();
 
+  const landId = land.id;
+  const landIsActive = land.is_active;
+  const [isOpenToday, setIsOpenToday] = useState(land.is_active);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [booking, setBooking] = useState<LandBooking | null>(null);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingMsg, setBookingMsg] = useState("");
   const color = land.theme_color;
   const fadeBg = `linear-gradient(160deg, ${color} 0%, ${hexToRgba(color, 0.5)} 40%, var(--color-dark) 100%)`;
   const landBadge = BADGE_DEFINITIONS.find(
@@ -46,6 +62,74 @@ export default function LandPage({ params }: LandPageProps) {
     };
     return map[rarity] ?? map.common;
   };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setProfileId(sessionStorage.getItem("sphere_profile_id"));
+    }
+
+    async function loadSchedule() {
+      try {
+        const res = await fetch(`/api/schedule?date=${getEgyptDateString()}`);
+        const json = await res.json() as { lands?: { land_id: string; is_open: boolean }[] };
+        const status = json.lands?.find((item) => item.land_id === landId);
+        if (res.ok && status) setIsOpenToday(status.is_open);
+      } catch {
+        setIsOpenToday(landIsActive);
+      }
+    }
+
+    loadSchedule();
+  }, [landId, landIsActive]);
+
+  useEffect(() => {
+    if (!profileId) return;
+
+    async function loadBooking() {
+      try {
+        const res = await fetch(`/api/bookings?profile_id=${profileId}&date=${getEgyptDateString()}`);
+        const json = await res.json() as { data?: LandBooking[] };
+        if (res.ok && json.data) {
+          setBooking(json.data.find((item) => item.land_id === landId) ?? null);
+        }
+      } catch {
+        // Booking status is helpful but not required to render the land page.
+      }
+    }
+
+    loadBooking();
+  }, [profileId, landId]);
+
+  async function bookLand() {
+    if (!profileId || !isOpenToday || bookingLoading) return;
+    setBookingLoading(true);
+    setBookingMsg("");
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_id: profileId, land_id: landId }),
+      });
+      const json = await res.json() as { data?: LandBooking; error?: string };
+      if (!res.ok || json.error || !json.data) throw new Error(json.error ?? "Booking failed");
+      setBooking(json.data);
+      setBookingMsg("Booked for today. Staff will scan your wristband before play starts.");
+    } catch (err) {
+      setBookingMsg(err instanceof Error ? err.message : "Booking failed");
+    } finally {
+      setBookingLoading(false);
+    }
+  }
+
+  function bookingLabel(status: BookingStatus) {
+    const labels: Record<BookingStatus, string> = {
+      booked: "Booked Today",
+      started: "Playing Now",
+      completed: "Completed Today",
+      cancelled: "Cancelled",
+    };
+    return labels[status];
+  }
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-dark)" }}>
@@ -100,6 +184,9 @@ export default function LandPage({ params }: LandPageProps) {
               { icon: <Star size={14} />, label: getAgeLabel(land.age_min, land.age_max) },
               { icon: <Zap size={14} />, label: `${land.stations.length} Activities` },
               { icon: <Clock size={14} />, label: "50 pts / hour" },
+              isOpenToday
+                ? { icon: <CheckCircle2 size={14} />, label: "Open Today" }
+                : { icon: <Lock size={14} />, label: "Closed Today" },
             ].map((stat, i) => (
               <span key={i}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold"
@@ -274,20 +361,47 @@ export default function LandPage({ params }: LandPageProps) {
             Ready to explore <span style={{ color }}>{land.name}</span>?
           </h2>
           <p className="text-lg mb-8" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Register, get your NFC wristband, and start earning points today.
+            Book this land, let staff scan your wristband, and your points will be counted from the play session.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register"
-              className="block px-8 py-4 rounded-2xl text-lg font-bold text-white"
-              style={{ background: color, touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>
-              Register to Play
-            </Link>
+            {!isOpenToday ? (
+              <span
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold"
+                style={{ background: "rgba(148,163,184,0.18)", color: "rgba(255,255,255,0.58)", border: "1px solid rgba(148,163,184,0.22)" }}
+              >
+                <Lock size={18} />
+                Closed Today
+              </span>
+            ) : profileId ? (
+              <button
+                type="button"
+                onClick={bookLand}
+                disabled={bookingLoading || (!!booking && booking.status !== "cancelled")}
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold text-white disabled:opacity-70"
+                style={{ background: color, touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+              >
+                {bookingLoading ? <Loader2 size={18} className="animate-spin" /> : <CalendarCheck size={18} />}
+                {booking ? bookingLabel(booking.status) : "Book This Land"}
+              </button>
+            ) : (
+              <Link href="/login"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold text-white"
+                style={{ background: color, touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>
+                <CalendarCheck size={18} />
+                Log In to Book
+              </Link>
+            )}
             <Link href="/leaderboard"
               className="block px-8 py-4 rounded-2xl text-lg font-semibold"
               style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>
               View Leaderboard
             </Link>
           </div>
+          {(booking || bookingMsg) && (
+            <p className="mt-5 text-sm font-semibold" style={{ color: bookingMsg.includes("failed") || bookingMsg.includes("closed") ? "#f87171" : "rgba(255,255,255,0.72)" }}>
+              {bookingMsg || "This land is on today's booking list."}
+            </p>
+          )}
         </div>
       </section>
     </div>

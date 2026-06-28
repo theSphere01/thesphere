@@ -237,6 +237,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    await supabase
+      .from("land_bookings")
+      .update({
+        status: "completed",
+        completed_at: now,
+        updated_at: now,
+      })
+      .eq("session_id", session_id)
+      .eq("status", "started");
+
     // Update profile totals
     await supabase
       .from("profiles")

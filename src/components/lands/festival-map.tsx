@@ -452,6 +452,7 @@ interface FestivalMapProps {
   compact?: boolean;
   forceMap?: boolean;
   showViewToggle?: boolean;
+  openLandIds?: string[] | null;
 }
 
 interface TooltipTarget {
@@ -466,6 +467,7 @@ export default function FestivalMap({
   compact = false,
   forceMap = false,
   showViewToggle = true,
+  openLandIds = null,
 }: FestivalMapProps) {
   const router = useRouter();
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
@@ -493,6 +495,10 @@ export default function FestivalMap({
   const effectiveViewMode = forceMap ? "map" : viewMode;
   const mapMinHeight = compact ? (isMobile ? 500 : 560) : (isMobile ? 680 : 800);
   const blobScale = isMobile ? 0.64 : 1;
+  const runtimeLands = LANDS.map((land) => ({
+    ...land,
+    is_active: openLandIds ? openLandIds.includes(land.id) : land.is_active,
+  }));
 
   function getLandPosition(slug: string) {
     const pos = LAND_POSITIONS[slug];
@@ -510,7 +516,7 @@ export default function FestivalMap({
     return true;
   }
 
-  const visibleLandsCount = LANDS.reduce((count, land) => count + (isVisible(land) ? 1 : 0), 0);
+  const visibleLandsCount = runtimeLands.reduce((count, land) => count + (isVisible(land) ? 1 : 0), 0);
 
   return (
     <div style={{ position: "relative", borderRadius: 16, overflow: "hidden" }}>
@@ -575,7 +581,7 @@ export default function FestivalMap({
             ))}
 
             {/* Ambient glow pools */}
-            {LANDS.map((land) => {
+            {runtimeLands.map((land) => {
               const pos = getLandPosition(land.slug);
               return pos ? <AmbientGlow key={land.id} land={land} pos={pos} /> : null;
             })}
@@ -584,7 +590,7 @@ export default function FestivalMap({
             <FestivalPaths />
 
             {/* Land blobs */}
-            {LANDS.map((land, i) => {
+            {runtimeLands.map((land, i) => {
               const pos = getLandPosition(land.slug);
               if (!pos) return null;
               return (
@@ -698,11 +704,11 @@ export default function FestivalMap({
           <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ background: "linear-gradient(158deg, #1a2f1a 0%, #091808 100%)", padding: "1.25rem", minHeight: compact ? 400 : 580 }}
           >
-            {LANDS.filter(isVisible).map((land, i) => (
+            {runtimeLands.filter(isVisible).map((land, i) => (
               <LandListItem key={land.id} land={land} challenge={challengeMap[land.slug]} index={i}
                 onClick={() => router.push(`/lands/${land.slug}`)} />
             ))}
-            {LANDS.filter(isVisible).length === 0 && (
+            {runtimeLands.filter(isVisible).length === 0 && (
               <div style={{ textAlign: "center", padding: "3rem", color: "rgba(255,255,255,0.38)" }}>
                 <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔍</div>
                 <div>No lands match this filter right now.</div>

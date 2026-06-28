@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import { handleRouteError } from "@/lib/auth/handle-error";
+import { getEgyptDateString } from "@/lib/dates";
 
 const patchSchema = z.object({
   name:          z.string().min(1).max(100).optional(),
@@ -44,13 +45,32 @@ export async function PATCH(
     const body = await req.json();
     const updates = patchSchema.parse(body);
     const supabase = createAdminClient();
+    const { is_open_today, ...landUpdates } = updates;
 
-    const { error } = await supabase
-      .from("lands")
-      .update(updates)
-      .eq("id", id);
+    if (Object.keys(landUpdates).length > 0) {
+      const { error } = await supabase
+        .from("lands")
+        .update(landUpdates)
+        .eq("id", id);
 
-    if (error) throw error;
+      if (error) throw error;
+    }
+
+    if (typeof is_open_today === "boolean") {
+      const { error } = await supabase
+        .from("daily_land_schedule")
+        .upsert(
+          {
+            schedule_date: getEgyptDateString(),
+            land_id: id,
+            is_open: is_open_today,
+          },
+          { onConflict: "schedule_date,land_id" }
+        );
+
+      if (error) throw error;
+    }
+
     return NextResponse.json({ data: { updated: true } });
   } catch (err) {
     return handleRouteError(err);

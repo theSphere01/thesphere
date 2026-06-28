@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence, useMotionValue, animate } from "framer-motion";
 import {
   Zap, Trophy, MapPin, Flame, Tag, Crown, Medal,
-  ChevronDown, ChevronUp, Map, User, LogOut, Copy,
+  ChevronDown, ChevronUp, Map, User, LogOut, Copy, CalendarCheck,
 } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/types";
 import { generateInitials, getRankColor } from "@/lib/utils";
@@ -42,6 +42,20 @@ interface DailyOffers {
   ceremony: { date: string; status: string; label: string } | null;
 }
 
+interface LandBooking {
+  id: string;
+  land_id: string;
+  booking_date: string;
+  status: "booked" | "started" | "completed" | "cancelled";
+  land: {
+    id: string;
+    name: string;
+    slug: string;
+    theme_color: string;
+    icon_emoji: string;
+  } | null;
+}
+
 const MILESTONES = [100, 250, 500, 1000, 2500, 5000];
 function nextMilestone(pts: number) { return MILESTONES.find(m => m > pts) ?? MILESTONES[MILESTONES.length - 1]; }
 function prevMilestone(pts: number) { const i = MILESTONES.findIndex(m => m > pts); return i <= 0 ? 0 : MILESTONES[i - 1]; }
@@ -72,6 +86,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<DashboardProfile | null>(null);
   const [offers, setOffers] = useState<DailyOffers | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [bookings, setBookings] = useState<LandBooking[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [lbExpanded, setLbExpanded] = useState(false);
@@ -91,18 +106,21 @@ export default function DashboardPage() {
     if (!profileId) return;
     async function load() {
       try {
-        const [profileRes, offersRes, lbRes] = await Promise.all([
+        const [profileRes, offersRes, lbRes, bookingsRes] = await Promise.all([
           fetch(`/api/profiles/${profileId}`),
           fetch(`/api/offers/today?profile_id=${profileId}`),
           fetch("/api/leaderboard?type=season"),
+          fetch(`/api/bookings?profile_id=${profileId}`),
         ]);
-        const [profileJson, offersJson, lbJson] = await Promise.all([
+        const [profileJson, offersJson, lbJson, bookingsJson] = await Promise.all([
           profileRes.json() as Promise<{ data?: { profile: DashboardProfile } }>,
           offersRes.json() as Promise<{ data?: DailyOffers }>,
           lbRes.json() as Promise<{ data?: LeaderboardEntry[] }>,
+          bookingsRes.json() as Promise<{ data?: LandBooking[] }>,
         ]);
         if (profileJson.data?.profile) setProfile(profileJson.data.profile);
         if (offersJson.data) setOffers(offersJson.data);
+        if (bookingsJson.data) setBookings(bookingsJson.data);
         if (lbJson.data) {
           setLeaderboard(lbJson.data);
           const myEntry = lbJson.data.find(e => e.profile_id === profileId);
@@ -141,6 +159,18 @@ export default function DashboardPage() {
   const visibleLb = lbExpanded ? leaderboard : leaderboard.slice(0, 5);
   const myLbEntry = leaderboard.find(e => e.profile_id === profileId);
   const myInTop = myRank !== null && myRank <= 10;
+  const bookingLabels: Record<LandBooking["status"], string> = {
+    booked: "Booked",
+    started: "Playing",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+  const bookingColors: Record<LandBooking["status"], string> = {
+    booked: "var(--color-sphere-gold)",
+    started: "var(--color-ws-blue)",
+    completed: "var(--color-ws-green)",
+    cancelled: "rgba(148,163,184,0.8)",
+  };
 
   return (
     <div
@@ -443,6 +473,48 @@ export default function DashboardPage() {
                   </div>
                 </motion.div>
               ))}
+            </div>
+          </motion.section>
+        )}
+
+        {bookings.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.41 }}
+            style={{ marginBottom: "1.5rem" }}
+          >
+            <SectionLabel icon={<CalendarCheck size={13} />} label="Booked Lands Today" />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.625rem" }}>
+              {bookings.map((booking) => {
+                const color = booking.land?.theme_color ?? "var(--color-sphere-coral)";
+                return (
+                  <Link
+                    key={booking.id}
+                    href={booking.land ? `/lands/${booking.land.slug}` : "/lands"}
+                    style={{
+                      textDecoration: "none",
+                      background: `${color}12`,
+                      border: `1px solid ${color}35`,
+                      borderRadius: 14,
+                      padding: "0.875rem 1rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.45rem" }}>{booking.land?.icon_emoji ?? ""}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: "white", fontWeight: 800, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {booking.land?.name ?? booking.land_id}
+                      </div>
+                      <div style={{ color: bookingColors[booking.status], fontSize: "0.72rem", fontWeight: 800, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        {bookingLabels[booking.status]}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </motion.section>
         )}

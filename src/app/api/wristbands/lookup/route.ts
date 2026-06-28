@@ -3,6 +3,7 @@ import { hasSupabase, createAdminClient } from "@/lib/supabase/admin";
 import { requireStaff } from "@/lib/auth/guards";
 import { handleRouteError } from "@/lib/auth/handle-error";
 import { verifyWristbandToken, WristbandTokenError } from "@/lib/nfc/token";
+import { getEgyptDateString } from "@/lib/dates";
 
 // ── GET /api/wristbands/lookup?qr=XXX  or  ?nfc_uid=XXX ───
 export async function GET(req: NextRequest) {
@@ -37,7 +38,14 @@ export async function GET(req: NextRequest) {
         is_active: true,
         created_at: new Date().toISOString(),
       };
-      return NextResponse.json({ data: { profile: mockProfile, wristband: mockWristband } });
+      return NextResponse.json({
+        data: {
+          profile: mockProfile,
+          wristband: mockWristband,
+          active_session_id: "session-mock-001",
+          bookings: [],
+        },
+      });
     }
 
     const supabase = createAdminClient();
@@ -66,7 +74,32 @@ export async function GET(req: NextRequest) {
     }
 
     const profile = Array.isArray(wristband.profile) ? wristband.profile[0] : wristband.profile;
-    return NextResponse.json({ data: { profile, wristband } });
+    const [{ data: activeSession }, { data: bookings }] = await Promise.all([
+      supabase
+        .from("sessions")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .eq("status", "active")
+        .order("check_in_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("land_bookings")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .eq("booking_date", getEgyptDateString())
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: true }),
+    ]);
+
+    return NextResponse.json({
+      data: {
+        profile,
+        wristband,
+        active_session_id: activeSession?.id ?? null,
+        bookings: bookings ?? [],
+      },
+    });
   } catch (err) {
     return handleRouteError(err);
   }

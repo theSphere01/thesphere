@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Edit3, X, Camera, Upload, Link2, Trash2, Plus, ImageOff } from "lucide-react";
 import { LANDS } from "@/lib/constants";
 import { hexToRgba } from "@/lib/utils";
+import { getEgyptDateString } from "@/lib/dates";
 
 type LandEntry = {
   id: string;
@@ -24,6 +25,7 @@ type LandEntry = {
 };
 
 type Photo = { id: string; url: string; caption?: string; sort_order: number };
+type ScheduleResponse = { lands?: { land_id: string; is_open: boolean }[] };
 
 export default function AdminLandsPage() {
   const [lands, setLands] = useState<LandEntry[]>(LANDS.map(l => ({ ...l, is_open_today: true })));
@@ -39,6 +41,24 @@ export default function AdminLandsPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function loadTodaySchedule() {
+      try {
+        const res = await fetch(`/api/schedule?date=${getEgyptDateString()}`);
+        const json = await res.json() as ScheduleResponse;
+        if (!res.ok || !json.lands) return;
+        const statusByLand = new Map(json.lands.map((item) => [item.land_id, item.is_open]));
+        setLands(prev => prev.map(land => ({
+          ...land,
+          is_open_today: statusByLand.get(land.id) ?? true,
+        })));
+      } catch {
+        // Keep the optimistic default if the schedule cannot be loaded.
+      }
+    }
+    loadTodaySchedule();
+  }, []);
 
   function openEdit(land: LandEntry) {
     setEditingLand(land);
@@ -72,13 +92,16 @@ export default function AdminLandsPage() {
     const next = !current;
     setLands(prev => prev.map(l => l.id === landId ? { ...l, is_open_today: next } : l));
     try {
-      await fetch(`/api/lands/${landId}`, {
+      const res = await fetch(`/api/lands/${landId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_open_today: next }),
       });
+      if (!res.ok) throw new Error("Save failed");
+      flash(next ? "Land opened for today." : "Land closed for today.");
     } catch {
       setLands(prev => prev.map(l => l.id === landId ? { ...l, is_open_today: current } : l));
+      flash("Could not update land status.");
     }
   }
 
@@ -162,11 +185,14 @@ export default function AdminLandsPage() {
 
   async function deletePhoto(photoId: string) {
     if (!photoModalLand) return;
+    if (!window.confirm("Remove this photo from the land?")) return;
     try {
       const res = await fetch(`/api/lands/${photoModalLand.id}/photos?photo_id=${photoId}`, { method: "DELETE" });
       if (res.ok) {
         setPhotos(prev => prev.filter(p => p.id !== photoId));
         flash("Photo removed.");
+      } else {
+        flash("Delete failed.");
       }
     } catch {
       flash("Delete failed.");
@@ -401,12 +427,24 @@ export default function AdminLandsPage() {
                             className="relative group rounded-xl overflow-hidden aspect-square bg-black/20">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={photo.url} alt={photo.caption ?? "Land photo"} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <button onClick={() => deletePhoto(photo.id)}
-                                className="p-2.5 rounded-full transition-colors"
-                                style={{ background: "rgba(239,68,68,0.85)" }}>
-                                <Trash2 size={18} color="#fff" />
-                              </button>
+                            <button
+                              type="button"
+                              aria-label="Remove photo"
+                              title="Remove photo"
+                              onClick={() => deletePhoto(photo.id)}
+                              className="absolute top-2 right-2 z-10 p-2 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                              style={{
+                                background: "rgba(239,68,68,0.92)",
+                                boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+                              }}
+                            >
+                              <Trash2 size={16} color="#fff" />
+                            </button>
+                            <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                              <span className="px-3 py-1.5 rounded-full text-xs font-bold text-white"
+                                style={{ background: "rgba(0,0,0,0.55)" }}>
+                                Remove photo
+                              </span>
                             </div>
                             {photo.caption && (
                               <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-xs truncate"

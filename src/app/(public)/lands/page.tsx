@@ -5,8 +5,10 @@ import Link from "next/link";
 import { ArrowLeft, Map, List } from "lucide-react";
 import FestivalMap from "@/components/lands/festival-map";
 import { LANDS } from "@/lib/constants";
+import { getEgyptDateString } from "@/lib/dates";
 
 type FilterKey = "all" | "open" | "young" | "older";
+type Land = typeof LANDS[number];
 
 const FILTERS: { key: FilterKey; label: string; icon: string }[] = [
   { key: "all",   label: "All Lands",  icon: "🗺" },
@@ -15,17 +17,21 @@ const FILTERS: { key: FilterKey; label: string; icon: string }[] = [
   { key: "older", label: "Ages 8+",    icon: "🚀" },
 ];
 
-function filterLands(filter: FilterKey) {
+function isOpenToday(land: Land, openLandIds: string[] | null) {
+  return openLandIds ? openLandIds.includes(land.id) : land.is_active;
+}
+
+function filterLands(filter: FilterKey, openLandIds: string[] | null) {
   return LANDS.filter((l) => {
-    if (filter === "open")  return l.is_active;
+    if (filter === "open")  return isOpenToday(l, openLandIds);
     if (filter === "young") return l.age_min <= 8;
     if (filter === "older") return l.age_max >= 8;
     return true;
   });
 }
 
-function LandListView({ filter }: { filter: FilterKey }) {
-  const lands = filterLands(filter);
+function LandListView({ filter, openLandIds }: { filter: FilterKey; openLandIds: string[] | null }) {
+  const lands = filterLands(filter, openLandIds);
   return (
     <div style={{
       display: "grid",
@@ -37,7 +43,7 @@ function LandListView({ filter }: { filter: FilterKey }) {
           <div
             style={{
               background: `linear-gradient(135deg, ${land.theme_color}28 0%, ${land.theme_color}14 100%)`,
-              border: `2px solid ${land.theme_color}55`,
+              border: `2px solid ${isOpenToday(land, openLandIds) ? land.theme_color + "55" : "rgba(148,163,184,0.22)"}`,
               borderRadius: 20,
               padding: "1.25rem 1rem",
               display: "flex",
@@ -49,6 +55,7 @@ function LandListView({ filter }: { filter: FilterKey }) {
               justifyContent: "center",
               boxShadow: `0 4px 20px ${land.theme_color}20`,
               cursor: "pointer",
+              opacity: isOpenToday(land, openLandIds) ? 1 : 0.55,
               WebkitTapHighlightColor: "transparent",
               transition: "transform 0.15s",
             }}
@@ -64,18 +71,15 @@ function LandListView({ filter }: { filter: FilterKey }) {
             </div>
             <div style={{
               fontSize: "0.68rem",
-              background: `${land.theme_color}22`,
-              color: land.theme_color,
+              background: isOpenToday(land, openLandIds) ? `${land.theme_color}22` : "rgba(148,163,184,0.12)",
+              color: isOpenToday(land, openLandIds) ? land.theme_color : "rgba(255,255,255,0.45)",
               padding: "2px 8px",
               borderRadius: 20,
               fontWeight: 700,
-              border: `1px solid ${land.theme_color}40`,
+              border: `1px solid ${isOpenToday(land, openLandIds) ? land.theme_color + "40" : "rgba(148,163,184,0.16)"}`,
             }}>
-              {land.stations.length} activities
+              {isOpenToday(land, openLandIds) ? `${land.stations.length} activities` : "Closed today"}
             </div>
-            {!land.is_active && (
-              <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.3)" }}>Closed today</div>
-            )}
           </div>
         </Link>
       ))}
@@ -87,11 +91,27 @@ export default function LandsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [view, setView]   = useState<"list" | "map">("list");
   const [mounted, setMounted] = useState(false);
+  const [openLandIds, setOpenLandIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     // Default to map on desktop, list on mobile
     if (window.innerWidth >= 640) setView("map");
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    async function loadSchedule() {
+      try {
+        const res = await fetch(`/api/schedule?date=${getEgyptDateString()}`);
+        const json = await res.json() as { lands?: { land_id: string; is_open: boolean }[] };
+        if (res.ok && json.lands) {
+          setOpenLandIds(json.lands.filter((item) => item.is_open).map((item) => item.land_id));
+        }
+      } catch {
+        setOpenLandIds(null);
+      }
+    }
+    loadSchedule();
   }, []);
 
   return (
@@ -209,7 +229,7 @@ export default function LandsPage() {
       {/* Content area */}
       <div className="max-w-7xl mx-auto px-4 pb-16">
         {!mounted || view === "list" ? (
-          <LandListView filter={activeFilter} />
+          <LandListView filter={activeFilter} openLandIds={openLandIds} />
         ) : (
           <>
             <div style={{
@@ -218,7 +238,7 @@ export default function LandsPage() {
               boxShadow: "0 24px 80px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.3)",
               border: "2px solid rgba(255,255,255,0.08)",
             }}>
-              <FestivalMap activeFilter={activeFilter} forceMap showViewToggle={false} />
+              <FestivalMap activeFilter={activeFilter} forceMap showViewToggle={false} openLandIds={openLandIds} />
             </div>
             <p className="text-center mt-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
               Live land map

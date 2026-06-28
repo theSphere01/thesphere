@@ -6,12 +6,13 @@ import { useNFC } from "@/hooks/use-nfc";
 
 interface Props {
   onScan: (profileId: string) => void;
-  mode?: "checkin" | "checkout" | "register";
+  mode?: "checkin" | "land" | "checkout" | "register";
   onQRFallback?: () => void;
 }
 
 const MODE_LABELS: Record<string, string> = {
   checkin:  "Check In",
+  land:     "Start Land",
   checkout: "Check Out",
   register: "Register Wristband",
 };

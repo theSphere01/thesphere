@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle, LogIn, LogOut, Timer, Copy, Star, RefreshCw,
+  PlayCircle, Square,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import NFCScanner from "@/components/nfc/nfc-scanner";
@@ -14,8 +15,9 @@ import type { Profile, BadgeDefinition, DiscountCode } from "@/lib/types";
 
 const QrScanner = dynamic(() => import("@/components/qr/qr-scanner"), { ssr: false });
 
-type Mode = "checkin" | "checkout";
+type Mode = "checkin" | "land" | "checkout";
 type CheckInPhase = "scan" | "profile" | "confirmed";
+type LandPhase = "scan" | "bookings";
 type CheckOutPhase = "scan" | "profile" | "lands" | "celebration";
 
 interface LandSelection {
@@ -23,11 +25,31 @@ interface LandSelection {
   hours: number;
 }
 
+interface LandBooking {
+  id: string;
+  profile_id: string;
+  land_id: string;
+  booking_date: string;
+  status: "booked" | "started" | "completed" | "cancelled";
+  session_id: string | null;
+  land_hour_id: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+interface WristbandLookupData {
+  profile: Profile;
+  active_session_id?: string | null;
+  bookings?: LandBooking[];
+}
+
 interface CheckoutResult {
-  points_earned: number;
-  new_badges: BadgeDefinition[];
-  discount_codes: DiscountCode[];
-  session_id: string;
+  points_earned?: number;
+  points_result?: { multipliedTotal: number };
+  new_badges?: BadgeDefinition[];
+  discount?: { code: string; discount_percent: number; type: string } | null;
+  discount_codes?: DiscountCode[];
+  session_id?: string;
 }
 
 export default function CheckInPage() {
@@ -40,6 +62,15 @@ export default function CheckInPage() {
   const [ciSessionId, setCISessionId] = useState<string | null>(null);
   const [ciLoading, setCILoading] = useState(false);
   const [ciError, setCIError] = useState<string | null>(null);
+
+  // Land start/finish state
+  const [landPhase, setLandPhase] = useState<LandPhase>("scan");
+  const [landProfile, setLandProfile] = useState<Profile | null>(null);
+  const [landSessionId, setLandSessionId] = useState<string | null>(null);
+  const [landBookings, setLandBookings] = useState<LandBooking[]>([]);
+  const [landLoading, setLandLoading] = useState(false);
+  const [landError, setLandError] = useState<string | null>(null);
+  const [landMsg, setLandMsg] = useState<string | null>(null);
 
   // Check-out state
   const [coPhase, setCOPhase] = useState<CheckOutPhase>("scan");
@@ -57,9 +88,9 @@ export default function CheckInPage() {
     setCIError(null);
     try {
       const res = await fetch(`/api/wristbands/lookup?qr=${encodeURIComponent(profileId)}`);
-      const json = await res.json() as { data?: Profile; error?: string };
+      const json = await res.json() as { data?: WristbandLookupData; error?: string };
       if (!res.ok || json.error) throw new Error(json.error ?? "Profile not found");
-      setCIProfile(json.data!);
+      setCIProfile(json.data!.profile);
       setCIPhase("profile");
     } catch (err) {
       setCIError(err instanceof Error ? err.message : "Could not load profile");
@@ -73,15 +104,39 @@ export default function CheckInPage() {
     setCOError(null);
     try {
       const res = await fetch(`/api/wristbands/lookup?qr=${encodeURIComponent(profileId)}`);
-      const json = await res.json() as { data?: Profile & { active_session_id?: string }; error?: string };
+      const json = await res.json() as { data?: WristbandLookupData; error?: string };
       if (!res.ok || json.error) throw new Error(json.error ?? "Profile not found");
-      setCOProfile(json.data!);
+      setCOProfile(json.data!.profile);
       setCOSessionId(json.data?.active_session_id ?? null);
       setCOPhase("profile");
     } catch (err) {
       setCOError(err instanceof Error ? err.message : "Could not load profile");
     } finally {
       setCOLoading(false);
+    }
+  }, []);
+
+  const handleLandScan = useCallback(async (profileId: string) => {
+    setLandLoading(true);
+    setLandError(null);
+    setLandMsg(null);
+    try {
+      const res = await fetch(`/api/wristbands/lookup?qr=${encodeURIComponent(profileId)}`);
+      const json = await res.json() as { data?: WristbandLookupData; error?: string };
+      if (!res.ok || json.error || !json.data) throw new Error(json.error ?? "Profile not found");
+      setLandProfile(json.data.profile);
+      setLandSessionId(json.data.active_session_id ?? null);
+      setLandBookings(json.data.bookings ?? []);
+      setLandPhase("bookings");
+      if (!json.data.active_session_id) {
+        setLandError("Camper is not checked in yet. Start a check-in session first.");
+      } else if ((json.data.bookings ?? []).length === 0) {
+        setLandError("No booked lands found for today.");
+      }
+    } catch (err) {
+      setLandError(err instanceof Error ? err.message : "Could not load bookings");
+    } finally {
+      setLandLoading(false);
     }
   }, []);
 
@@ -96,9 +151,9 @@ export default function CheckInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profile_id: ciProfile.id }),
       });
-      const json = await res.json() as { data?: { session_id: string }; error?: string };
+      const json = await res.json() as { data?: { session?: { id: string }; session_id?: string }; error?: string };
       if (!res.ok || json.error) throw new Error(json.error ?? "Check-in failed");
-      setCISessionId(json.data?.session_id ?? null);
+      setCISessionId(json.data?.session?.id ?? json.data?.session_id ?? null);
       setCIPhase("confirmed");
     } catch (err) {
       setCIError(err instanceof Error ? err.message : "Check-in failed");
@@ -134,7 +189,14 @@ export default function CheckInPage() {
         body: JSON.stringify({
           session_id:  coSessionId,
           profile_id:  coProfile.id,
-          land_hours:  selectedLands,
+          land_hours:  selectedLands.map((selection) => {
+            const land = LANDS.find((item) => item.id === selection.landId);
+            return {
+              land_id: selection.landId,
+              land_name: land?.name ?? selection.landId,
+              hours_completed: selection.hours,
+            };
+          }),
         }),
       });
       const json = await res.json() as { data?: CheckoutResult; error?: string };
@@ -148,6 +210,61 @@ export default function CheckInPage() {
     }
   }
 
+  async function startBookedLand(booking: LandBooking) {
+    if (!landSessionId) {
+      setLandError("Camper is not checked in yet. Start a check-in session first.");
+      return;
+    }
+    setLandLoading(true);
+    setLandError(null);
+    setLandMsg(null);
+    try {
+      const res = await fetch("/api/land-hours/enter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: landSessionId, land_id: booking.land_id }),
+      });
+      const json = await res.json() as { booking?: LandBooking; error?: string };
+      if (!res.ok || json.error || !json.booking) throw new Error(json.error ?? "Could not start land");
+      setLandBookings(prev => prev.map(item => item.id === booking.id ? json.booking! : item));
+      const land = LANDS.find(item => item.id === booking.land_id);
+      setLandMsg(`${land?.name ?? "Land"} started.`);
+    } catch (err) {
+      setLandError(err instanceof Error ? err.message : "Could not start land");
+    } finally {
+      setLandLoading(false);
+    }
+  }
+
+  async function finishBookedLand(booking: LandBooking) {
+    if (!booking.land_hour_id) return;
+    setLandLoading(true);
+    setLandError(null);
+    setLandMsg(null);
+    try {
+      const startedAt = booking.started_at ? new Date(booking.started_at).getTime() : Date.now();
+      const hoursCompleted = Math.max(0.05, (Date.now() - startedAt) / 3_600_000);
+      const res = await fetch("/api/land-hours/exit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ land_hour_id: booking.land_hour_id, hours_completed: hoursCompleted }),
+      });
+      const json = await res.json() as { error?: string };
+      if (!res.ok || json.error) throw new Error(json.error ?? "Could not finish land");
+      setLandBookings(prev => prev.map(item =>
+        item.id === booking.id
+          ? { ...item, status: "completed", completed_at: new Date().toISOString() }
+          : item
+      ));
+      const land = LANDS.find(item => item.id === booking.land_id);
+      setLandMsg(`${land?.name ?? "Land"} completed.`);
+    } catch (err) {
+      setLandError(err instanceof Error ? err.message : "Could not finish land");
+    } finally {
+      setLandLoading(false);
+    }
+  }
+
   function resetAll() {
     setMode("checkin");
     setShowQR(false);
@@ -155,6 +272,12 @@ export default function CheckInPage() {
     setCIProfile(null);
     setCISessionId(null);
     setCIError(null);
+    setLandPhase("scan");
+    setLandProfile(null);
+    setLandSessionId(null);
+    setLandBookings([]);
+    setLandError(null);
+    setLandMsg(null);
     setCOPhase("scan");
     setCOProfile(null);
     setCOSessionId(null);
@@ -230,19 +353,23 @@ export default function CheckInPage() {
           margin: "0 auto",
         }}
       >
-        {(["checkin", "checkout"] as Mode[]).map((m) => (
+        {([
+          { id: "checkin", label: "Check In", icon: <LogIn size={16} /> },
+          { id: "land", label: "Start Land", icon: <PlayCircle size={16} /> },
+          { id: "checkout", label: "Check Out", icon: <LogOut size={16} /> },
+        ] as { id: Mode; label: string; icon: React.ReactNode }[]).map((tab) => (
           <button
-            key={m}
-            onClick={() => { setMode(m); setShowQR(false); }}
+            key={tab.id}
+            onClick={() => { setMode(tab.id); setShowQR(false); }}
             style={{
               flex: 1,
               padding: "0.75rem",
               borderRadius: 12,
-              border: `2px solid ${mode === m ? "var(--color-sphere-coral)" : "rgba(255,255,255,0.1)"}`,
-              background: mode === m ? "rgba(255,107,71,0.15)" : "transparent",
-              color: mode === m ? "var(--color-sphere-coral)" : "var(--color-text-muted)",
+              border: `2px solid ${mode === tab.id ? "var(--color-sphere-coral)" : "rgba(255,255,255,0.1)"}`,
+              background: mode === tab.id ? "rgba(255,107,71,0.15)" : "transparent",
+              color: mode === tab.id ? "var(--color-sphere-coral)" : "var(--color-text-muted)",
               fontWeight: 700,
-              fontSize: "0.9rem",
+              fontSize: "0.78rem",
               cursor: "pointer",
               letterSpacing: "0.06em",
               textTransform: "uppercase",
@@ -253,8 +380,8 @@ export default function CheckInPage() {
               transition: "all 0.18s ease",
             }}
           >
-            {m === "checkin" ? <LogIn size={16} /> : <LogOut size={16} />}
-            {m === "checkin" ? "Check In" : "Check Out"}
+            {tab.icon}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -341,6 +468,163 @@ export default function CheckInPage() {
             </motion.div>
           )}
 
+          {mode === "land" && (
+            <motion.div
+              key="land"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25 }}
+            >
+              {landPhase === "scan" && (
+                <ScanCard
+                  mode="land"
+                  showQR={showQR}
+                  onToggleQR={() => setShowQR(!showQR)}
+                  onNFCScan={handleLandScan}
+                  onQRScan={handleLandScan}
+                  loading={landLoading}
+                  error={landError}
+                />
+              )}
+
+              {landPhase === "bookings" && landProfile && (
+                <div>
+                  <ProfileCard profile={landProfile} />
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 18,
+                      padding: "1rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "0.75rem",
+                        marginBottom: "0.875rem",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: "0.82rem",
+                          fontWeight: 800,
+                          color: "var(--color-sphere-gold)",
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Booked Lands Today
+                      </h3>
+                      <button
+                        onClick={() => { setLandPhase("scan"); setLandProfile(null); setLandBookings([]); setLandError(null); setLandMsg(null); }}
+                        style={{
+                          background: "rgba(255,255,255,0.06)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: 8,
+                          color: "var(--color-text-muted)",
+                          padding: "0.35rem 0.6rem",
+                          fontSize: "0.72rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Scan another
+                      </button>
+                    </div>
+
+                    {landError && <ErrorBanner message={landError} />}
+                    {landMsg && (
+                      <div
+                        style={{
+                          background: "rgba(34,197,94,0.1)",
+                          border: "1px solid rgba(34,197,94,0.28)",
+                          borderRadius: 10,
+                          color: "#4ade80",
+                          padding: "0.7rem 1rem",
+                          fontSize: "0.875rem",
+                          marginBottom: "0.75rem",
+                        }}
+                      >
+                        {landMsg}
+                      </div>
+                    )}
+
+                    {landBookings.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                        {landBookings.map((booking) => {
+                          const land = LANDS.find(item => item.id === booking.land_id);
+                          const canStart = booking.status === "booked" && !!landSessionId;
+                          const canFinish = booking.status === "started" && !!booking.land_hour_id;
+                          return (
+                            <div
+                              key={booking.id}
+                              style={{
+                                borderRadius: 14,
+                                border: `1.5px solid ${land ? land.theme_color + "55" : "rgba(255,255,255,0.08)"}`,
+                                background: land ? land.theme_color + "12" : "rgba(255,255,255,0.03)",
+                                padding: "0.85rem 1rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.75rem",
+                              }}
+                            >
+                              <span style={{ fontSize: "1.35rem" }}>{land?.icon_emoji}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ color: "white", fontWeight: 800, fontSize: "0.92rem" }}>
+                                  {land?.name ?? booking.land_id}
+                                </div>
+                                <div style={{ color: "var(--color-text-muted)", fontSize: "0.72rem", marginTop: 2 }}>
+                                  {booking.status === "booked" && "Ready for staff start scan"}
+                                  {booking.status === "started" && "Playing now"}
+                                  {booking.status === "completed" && "Completed today"}
+                                  {booking.status === "cancelled" && "Cancelled"}
+                                </div>
+                              </div>
+                              {canStart && (
+                                <button
+                                  onClick={() => startBookedLand(booking)}
+                                  disabled={landLoading}
+                                  style={{
+                                    ...miniActionStyle,
+                                    background: land?.theme_color ?? "var(--color-sphere-coral)",
+                                    color: "#fff",
+                                  }}
+                                >
+                                  <PlayCircle size={14} />
+                                  Start
+                                </button>
+                              )}
+                              {canFinish && (
+                                <button
+                                  onClick={() => finishBookedLand(booking)}
+                                  disabled={landLoading}
+                                  style={{
+                                    ...miniActionStyle,
+                                    background: "rgba(255,255,255,0.08)",
+                                    color: "var(--color-text-light)",
+                                    border: "1px solid rgba(255,255,255,0.14)",
+                                  }}
+                                >
+                                  <Square size={13} />
+                                  Finish
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {mode === "checkout" && (
             <motion.div
               key="checkout"
@@ -364,11 +648,19 @@ export default function CheckInPage() {
               {coPhase === "profile" && coProfile && (
                 <div>
                   <ProfileCard profile={coProfile} />
-                  {coError && <ErrorBanner message={coError} />}
+                  {(coError || !coSessionId) && (
+                    <ErrorBanner message={coError ?? "No active check-in session found for this camper."} />
+                  )}
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => setCOPhase("lands")}
-                    style={{ ...primaryBtnStyle, marginTop: "1.25rem", width: "100%" }}
+                    disabled={!coSessionId}
+                    style={{
+                      ...primaryBtnStyle,
+                      marginTop: "1.25rem",
+                      width: "100%",
+                      opacity: coSessionId ? 1 : 0.5,
+                    }}
                   >
                     <LogOut size={18} />
                     Select Lands Visited
@@ -390,6 +682,9 @@ export default function CheckInPage() {
                   >
                     Which lands did they visit?
                   </h3>
+                  <p style={{ color: "var(--color-text-muted)", fontSize: "0.82rem", margin: "-0.4rem 0 1rem" }}>
+                    If staff already started booked lands with the Start Land scan, checkout can calculate from those scans directly.
+                  </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
                     {LANDS.map((land) => {
                       const sel = selectedLands.find((l) => l.landId === land.id);
@@ -455,11 +750,11 @@ export default function CheckInPage() {
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={confirmCheckOut}
-                    disabled={coLoading || selectedLands.length === 0}
+                    disabled={coLoading || !coSessionId}
                     style={{
                       ...primaryBtnStyle,
                       background:
-                        coLoading || selectedLands.length === 0
+                        coLoading || !coSessionId
                           ? "rgba(212,168,67,0.3)"
                           : "linear-gradient(135deg, var(--color-sphere-gold), var(--color-sphere-coral))",
                       marginTop: "1.5rem",
@@ -469,7 +764,7 @@ export default function CheckInPage() {
                     <Star size={18} />
                     {coLoading
                       ? "Calculating Points..."
-                      : `Check Out & Calculate Points${selectedLands.length > 0 ? ` (${selectedLands.length} land${selectedLands.length > 1 ? "s" : ""})` : ""}`}
+                      : `Check Out & Calculate Points${selectedLands.length > 0 ? ` (${selectedLands.length} manual land${selectedLands.length > 1 ? "s" : ""})` : ""}`}
                   </motion.button>
                 </div>
               )}
@@ -671,6 +966,16 @@ function CelebrationScreen({
   onCopy: (code: string) => void;
   onReset: () => void;
 }) {
+  const pointsEarned = result.points_result?.multipliedTotal ?? result.points_earned ?? 0;
+  const newBadges = result.new_badges ?? [];
+  const earnedDiscounts = result.discount_codes ?? (result.discount
+    ? [{
+        id: result.discount.code,
+        code: result.discount.code,
+        discount_percent: result.discount.discount_percent,
+        valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      }]
+    : []);
   // Floating orb colors
   const orbs = [
     { color: "#FF6B47", top: "8%",  left: "4%",  size: 80,  delay: "0s"    },
@@ -758,11 +1063,11 @@ function CelebrationScreen({
             marginBottom: "1.5rem",
           }}
         >
-          <PointsDisplay value={result.points_earned} label="Points Earned" size="lg" />
+          <PointsDisplay value={pointsEarned} label="Points Earned" size="lg" />
         </motion.div>
 
         {/* New badges */}
-        {result.new_badges && result.new_badges.length > 0 && (
+        {newBadges.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -779,7 +1084,7 @@ function CelebrationScreen({
                 marginBottom: "0.875rem",
               }}
             >
-              {result.new_badges.length === 1 ? "New Badge Unlocked!" : `${result.new_badges.length} Badges Unlocked!`}
+              {newBadges.length === 1 ? "New Badge Unlocked!" : `${newBadges.length} Badges Unlocked!`}
             </h3>
             <div
               style={{
@@ -789,7 +1094,7 @@ function CelebrationScreen({
                 flexWrap: "wrap",
               }}
             >
-              {result.new_badges.map((badge) => (
+              {newBadges.map((badge) => (
                 <BadgeDisplay
                   key={badge.id}
                   badge={badge}
@@ -802,7 +1107,7 @@ function CelebrationScreen({
         )}
 
         {/* Discount codes */}
-        {result.discount_codes && result.discount_codes.length > 0 && (
+        {earnedDiscounts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -822,7 +1127,7 @@ function CelebrationScreen({
               Discount Codes Earned
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {result.discount_codes.map((dc) => (
+              {earnedDiscounts.map((dc) => (
                 <div
                   key={dc.id}
                   style={{
@@ -920,4 +1225,18 @@ const primaryBtnStyle: React.CSSProperties = {
   gap: "0.5rem",
   letterSpacing: "0.04em",
   transition: "opacity 0.15s ease",
+};
+
+const miniActionStyle: React.CSSProperties = {
+  border: "none",
+  borderRadius: 9,
+  padding: "0.48rem 0.7rem",
+  fontWeight: 800,
+  fontSize: "0.75rem",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "0.35rem",
+  flexShrink: 0,
 };
