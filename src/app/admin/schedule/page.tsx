@@ -103,14 +103,14 @@ export default function SchedulePage() {
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="schedule-header flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-black text-white mb-1">Daily Schedule</h1>
           <p style={{ color: "rgba(255,255,255,0.5)" }}>
             Set which lands and stations are open each day.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="schedule-actions flex items-center gap-3">
           <button
             onClick={copyYesterday}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
@@ -132,7 +132,7 @@ export default function SchedulePage() {
       </div>
 
       {/* Date picker */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="schedule-date-row flex items-center gap-4 mb-6">
         <label className="text-sm font-semibold text-white">Date:</label>
         <input
           type="date"
@@ -175,17 +175,17 @@ export default function SchedulePage() {
             }}
           >
             {/* Land row */}
-            <div className="flex items-center gap-4 px-5 py-4">
+            <div className="schedule-land-row flex items-center gap-4 px-5 py-4">
               {/* Color dot */}
               <div className="w-3 h-3 rounded-full flex-shrink-0"
                 style={{ background: land.is_open ? land.theme_color : "rgba(255,255,255,0.2)" }} />
 
               <span className="text-xl">{land.icon_emoji}</span>
 
-              <div className="flex-1 font-bold text-white">{land.name}</div>
+              <div className="schedule-land-name flex-1 font-bold text-white">{land.name}</div>
 
               {/* Station count */}
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <span className="schedule-station-count text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
                 {land.stations.filter(s => s.is_active).length}/{land.stations.length} stations active
               </span>
 
@@ -241,6 +241,46 @@ export default function SchedulePage() {
           </motion.div>
         ))}
       </div>
+
+      <style>{`
+        @media (max-width: 760px) {
+          .schedule-header,
+          .schedule-actions,
+          .schedule-date-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+
+          .schedule-actions,
+          .schedule-date-row {
+            gap: 0.65rem !important;
+          }
+
+          .schedule-actions button,
+          .schedule-date-row input,
+          .schedule-date-row span {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+
+          .schedule-land-row {
+            flex-wrap: wrap !important;
+            gap: 0.75rem !important;
+            padding: 0.9rem !important;
+          }
+
+          .schedule-land-name {
+            flex-basis: calc(100% - 4rem) !important;
+            min-width: 0 !important;
+          }
+
+          .schedule-station-count {
+            order: 5 !important;
+            width: 100% !important;
+            padding-left: 2rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

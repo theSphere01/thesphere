@@ -121,9 +121,9 @@ export default function CampersPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+      <div className="campers-table rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
         {/* Header */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 text-xs font-bold uppercase tracking-wider"
+        <div className="camper-table-header grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 text-xs font-bold uppercase tracking-wider"
           style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}>
           <span>Camper</span>
           <span>Age</span>
@@ -152,7 +152,7 @@ export default function CampersPage() {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 items-center px-5 py-4 border-t hover:bg-white/[0.03] transition-colors"
+              className="camper-table-row grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 items-center px-5 py-4 border-t hover:bg-white/[0.03] transition-colors"
               style={{ borderColor: "rgba(255,255,255,0.06)" }}
             >
               {/* Name */}
@@ -178,22 +178,22 @@ export default function CampersPage() {
               <span className="text-sm text-white">{camper.age ?? "—"}</span>
 
               {/* Visits */}
-              <span className="text-sm font-bold" style={{ color: "var(--color-sphere-coral)" }}>
+              <span className="camper-metric text-sm font-bold" data-label="Visits" style={{ color: "var(--color-sphere-coral)" }}>
                 {camper.visit_count}
               </span>
 
               {/* Points */}
-              <span className="text-sm font-bold" style={{ color: "var(--color-sphere-gold)" }}>
+              <span className="camper-metric text-sm font-bold" data-label="Total Pts" style={{ color: "var(--color-sphere-gold)" }}>
                 {formatPoints(camper.total_points)}
               </span>
 
               {/* Last visit */}
-              <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+              <span className="camper-metric text-sm" data-label="Last Visit" style={{ color: "rgba(255,255,255,0.5)" }}>
                 {camper.created_at ? formatDate(camper.created_at) : "—"}
               </span>
 
               {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="camper-actions flex items-center gap-2">
                 {adjustMsg[camper.id] && (
                   <span className="text-xs font-bold" style={{ color: "#22c55e" }}>
                     {adjustMsg[camper.id]}
@@ -254,6 +254,76 @@ export default function CampersPage() {
           ))}
         </AnimatePresence>
       </div>
+
+      <style>{`
+        @media (max-width: 760px) {
+          .campers-table {
+            border: 0 !important;
+            background: transparent !important;
+            overflow: visible !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.75rem !important;
+          }
+
+          .camper-table-header {
+            display: none !important;
+          }
+
+          .camper-table-row {
+            grid-template-columns: 1fr !important;
+            gap: 0.8rem !important;
+            padding: 1rem !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 14px !important;
+            background: rgba(255,255,255,0.04) !important;
+          }
+
+          .camper-table-row > span {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 1rem !important;
+            padding: 0.55rem 0 !important;
+            border-top: 1px solid rgba(255,255,255,0.06) !important;
+          }
+
+          .camper-table-row > span::before {
+            color: rgba(255,255,255,0.42);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+          }
+
+          .camper-table-row > span:nth-of-type(1)::before {
+            content: "Age";
+          }
+
+          .camper-table-row > span:nth-of-type(2)::before {
+            content: "Visits";
+          }
+
+          .camper-table-row > span:nth-of-type(3)::before {
+            content: "Total Pts";
+          }
+
+          .camper-table-row > span:nth-of-type(4)::before {
+            content: "Last Visit";
+          }
+
+          .camper-actions {
+            flex-wrap: wrap !important;
+            justify-content: flex-start !important;
+            padding-top: 0.35rem !important;
+          }
+
+          .camper-actions > button,
+          .camper-actions > a {
+            min-height: 36px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
