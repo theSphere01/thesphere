@@ -416,6 +416,9 @@ export default function AdminLandsPage() {
                       style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.1)" }}>
                       <ImageOff size={36} style={{ color: "rgba(255,255,255,0.15)", marginBottom: "0.75rem" }} />
                       <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.9rem" }}>No photos yet — add the first one above</p>
+                      <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "0.75rem", marginTop: "0.35rem" }}>
+                        The remove button appears on each uploaded photo.
+                      </p>
                     </div>
                   )}
                   {!photosLoading && photos.length > 0 && (

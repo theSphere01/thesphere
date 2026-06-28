@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Upload, Link as LinkIcon, Check, Loader2, ImageIcon, RefreshCw } from "lucide-react";
+import { Upload, Link as LinkIcon, Check, Loader2, ImageIcon, RefreshCw, Trash2 } from "lucide-react";
 
 interface PhotoSlot {
   key: string;
@@ -75,14 +75,21 @@ function PhotoCard({ slot, currentUrl, onSaved }: {
     }
   }
 
+  const displayUrl = preview ?? currentUrl;
+
+  async function removePhoto() {
+    if (!displayUrl) return;
+    if (!window.confirm(`Remove ${slot.label}? The public page will fall back to no custom photo for this slot.`)) return;
+    await saveSetting("");
+    setPreview("");
+  }
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file?.type.startsWith("image/")) uploadFile(file);
   }
-
-  const displayUrl = preview ?? currentUrl;
 
   return (
     <motion.div
@@ -107,6 +114,34 @@ function PhotoCard({ slot, currentUrl, onSaved }: {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(255,255,255,0.3)" }}>
             <ImageIcon size={48} />
           </div>
+        )}
+        {displayUrl && (
+          <button
+            type="button"
+            onClick={removePhoto}
+            title="Remove photo"
+            aria-label={`Remove ${slot.label}`}
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 999,
+              background: "rgba(185,28,28,0.92)",
+              color: "#fff",
+              padding: "0.42rem 0.75rem",
+              fontSize: "0.78rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
+            }}
+          >
+            <Trash2 size={14} />
+            Remove
+          </button>
         )}
         {saved && (
           <motion.div
@@ -284,7 +319,7 @@ export default function HomePhotosPage() {
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: "1.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: "1.5rem" }}>
           {SLOTS.map(slot => (
             <PhotoCard
               key={slot.key}
