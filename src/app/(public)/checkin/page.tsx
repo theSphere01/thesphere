@@ -68,6 +68,7 @@ export default function CheckInPage() {
   const [landProfile, setLandProfile] = useState<Profile | null>(null);
   const [landSessionId, setLandSessionId] = useState<string | null>(null);
   const [landBookings, setLandBookings] = useState<LandBooking[]>([]);
+  const [selectedStartLandId, setSelectedStartLandId] = useState("");
   const [landLoading, setLandLoading] = useState(false);
   const [landError, setLandError] = useState<string | null>(null);
   const [landMsg, setLandMsg] = useState<string | null>(null);
@@ -124,21 +125,49 @@ export default function CheckInPage() {
       const res = await fetch(`/api/wristbands/lookup?qr=${encodeURIComponent(profileId)}`);
       const json = await res.json() as { data?: WristbandLookupData; error?: string };
       if (!res.ok || json.error || !json.data) throw new Error(json.error ?? "Profile not found");
-      setLandProfile(json.data.profile);
-      setLandSessionId(json.data.active_session_id ?? null);
-      setLandBookings(json.data.bookings ?? []);
+      const lookup = json.data;
+      let bookings = lookup.bookings ?? [];
+      setLandProfile(lookup.profile);
+      setLandSessionId(lookup.active_session_id ?? null);
       setLandPhase("bookings");
-      if (!json.data.active_session_id) {
+
+      if (selectedStartLandId) {
+        const selectedLand = LANDS.find(item => item.id === selectedStartLandId);
+        const booking = bookings.find(item => item.land_id === selectedStartLandId && item.status !== "cancelled");
+
+        if (!lookup.active_session_id) {
+          setLandError("Camper is not checked in yet. Start a check-in session first.");
+        } else if (!booking) {
+          setLandError(`${selectedLand?.name ?? "Selected land"} is not booked for this camper today.`);
+        } else if (booking.status === "booked") {
+          const startRes = await fetch("/api/land-hours/enter", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: lookup.active_session_id, land_id: selectedStartLandId }),
+          });
+          const startJson = await startRes.json() as { booking?: LandBooking; error?: string };
+          if (!startRes.ok || startJson.error || !startJson.booking) {
+            throw new Error(startJson.error ?? "Could not start land from scan");
+          }
+          bookings = bookings.map(item => item.id === booking.id ? startJson.booking! : item);
+          setLandMsg(`${selectedLand?.name ?? "Land"} started from staff scan.`);
+        } else if (booking.status === "started") {
+          setLandMsg(`${selectedLand?.name ?? "Land"} is already running.`);
+        } else if (booking.status === "completed") {
+          setLandError(`${selectedLand?.name ?? "Selected land"} was already completed today.`);
+        }
+      } else if (!lookup.active_session_id) {
         setLandError("Camper is not checked in yet. Start a check-in session first.");
-      } else if ((json.data.bookings ?? []).length === 0) {
+      } else if (bookings.length === 0) {
         setLandError("No booked lands found for today.");
       }
+      setLandBookings(bookings);
     } catch (err) {
       setLandError(err instanceof Error ? err.message : "Could not load bookings");
     } finally {
       setLandLoading(false);
     }
-  }, []);
+  }, [selectedStartLandId]);
 
   // ── check-in confirm ─────────────────────────────────────────
   async function confirmCheckIn() {
@@ -276,6 +305,7 @@ export default function CheckInPage() {
     setLandProfile(null);
     setLandSessionId(null);
     setLandBookings([]);
+    setSelectedStartLandId("");
     setLandError(null);
     setLandMsg(null);
     setCOPhase("scan");
@@ -477,15 +507,67 @@ export default function CheckInPage() {
               transition={{ duration: 0.25 }}
             >
               {landPhase === "scan" && (
-                <ScanCard
-                  mode="land"
-                  showQR={showQR}
-                  onToggleQR={() => setShowQR(!showQR)}
-                  onNFCScan={handleLandScan}
-                  onQRScan={handleLandScan}
-                  loading={landLoading}
-                  error={landError}
-                />
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 16,
+                      padding: "1rem",
+                    }}
+                  >
+                    <label
+                      htmlFor="start-land-select"
+                      style={{
+                        display: "block",
+                        color: "var(--color-sphere-gold)",
+                        fontSize: "0.72rem",
+                        fontWeight: 900,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        marginBottom: "0.55rem",
+                      }}
+                    >
+                      Land scan point
+                    </label>
+                    <select
+                      id="start-land-select"
+                      value={selectedStartLandId}
+                      onChange={(e) => setSelectedStartLandId(e.target.value)}
+                      style={{
+                        width: "100%",
+                        background: "rgba(255,255,255,0.07)",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        borderRadius: 12,
+                        color: "white",
+                        padding: "0.85rem 0.95rem",
+                        fontSize: "0.95rem",
+                        fontWeight: 800,
+                        outline: "none",
+                      }}
+                    >
+                      <option value="">Show booked lands only</option>
+                      {LANDS.map((land) => (
+                        <option key={land.id} value={land.id}>
+                          {land.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p style={{ color: "rgba(255,255,255,0.52)", fontSize: "0.78rem", margin: "0.65rem 0 0", lineHeight: 1.5 }}>
+                      Choose the current land, then scan the wristband. The play timer starts from that staff scan.
+                    </p>
+                  </div>
+
+                  <ScanCard
+                    mode="land"
+                    showQR={showQR}
+                    onToggleQR={() => setShowQR(!showQR)}
+                    onNFCScan={handleLandScan}
+                    onQRScan={handleLandScan}
+                    loading={landLoading}
+                    error={landError}
+                  />
+                </div>
               )}
 
               {landPhase === "bookings" && landProfile && (
