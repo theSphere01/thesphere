@@ -2,40 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { handleRouteError } from "@/lib/auth/handle-error";
 import { getParentLoginBundle, maskEmail, ParentLoginError } from "@/lib/auth/parent-login";
+import { generateOtpCode, hashOtp } from "@/lib/auth/otp";
+import { sendParentOtpEmail } from "@/lib/email/brevo-smtp";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createOtpAuthClient } from "@/lib/supabase/otp-auth";
-import { getAppUrl } from "@/lib/app-url";
 
 const schema = z.object({ phone: z.string().min(8).max(32) });
 const OTP_SEND_TIMEOUT_MS = 12_000;
-
-function isRateLimitError(error: { message?: string; status?: number; code?: string }) {
-  const message = (error.message ?? "").toLowerCase();
-  const code = (error.code ?? "").toLowerCase();
-  return error.status === 429 || code.includes("rate") || message.includes("rate limit") || message.includes("too many");
-}
-
-function isTimeoutError(error: { message?: string; status?: number; code?: string }) {
-  const message = (error.message ?? "").toLowerCase();
-  const code = (error.code ?? "").toLowerCase();
-  return (
-    error.status === 504 ||
-    code.includes("timeout") ||
-    message.includes("timeout") ||
-    message.includes("timed out") ||
-    message.includes("context deadline")
-  );
-}
-
-function isAlreadyRegisteredError(error: { message?: string; status?: number }) {
-  const message = (error.message ?? "").toLowerCase();
-  return (
-    message.includes("already") ||
-    message.includes("registered") ||
-    message.includes("exists") ||
-    message.includes("duplicate")
-  );
-}
+const OTP_EXPIRES_MINUTES = 10;
+const OTP_COOLDOWN_SECONDS = 60;
 
 class OtpSendTimeoutError extends Error {
   status = 504;
@@ -69,63 +43,66 @@ function timeoutResponse() {
   );
 }
 
-async function ensureOtpAuthUser(email: string, normalizedPhone: string) {
-  const admin = createAdminClient();
-  const { error } = await admin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    user_metadata: {
-      parent_phone: normalizedPhone,
-      source: "sphere-parent-portal",
-    },
-  });
-
-  if (error && !isAlreadyRegisteredError(error)) {
-    throw error;
-  }
-}
-
 // POST /api/auth/otp/request
 // The phone number identifies the parent record; the OTP is delivered to the
 // email captured during registration for that same phone.
 export async function POST(req: NextRequest) {
   try {
     const { phone } = schema.parse(await req.json());
-    const { email, normalizedPhone } = await getParentLoginBundle(phone);
-    await ensureOtpAuthUser(email, normalizedPhone);
-    const auth = createOtpAuthClient();
+    const { email, normalizedPhone, loginProfiles } = await getParentLoginBundle(phone);
+    const supabase = createAdminClient();
+    const now = new Date();
+    const recentCutoff = new Date(now.getTime() - OTP_COOLDOWN_SECONDS * 1000).toISOString();
 
-    const { error } = await withTimeout(auth.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: getAppUrl("/login", req.nextUrl.origin),
-        data: {
-          parent_phone: normalizedPhone,
-          source: "sphere-parent-portal",
-        },
-      },
-    }));
+    const { data: recentOtp, error: recentError } = await supabase
+      .from("phone_otps")
+      .select("id")
+      .eq("phone", normalizedPhone)
+      .eq("consumed", false)
+      .gt("created_at", recentCutoff)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (error) {
-      if (isRateLimitError(error)) {
-        return NextResponse.json(
-          {
-            error: "Email sending is temporarily limited. Please wait 60 seconds before requesting another code.",
-            retry_after_seconds: 60,
-          },
-          { status: 429 },
-        );
-      }
-
-      if (isTimeoutError(error)) {
-        return timeoutResponse();
-      }
-
+    if (recentError) throw recentError;
+    if (recentOtp) {
       return NextResponse.json(
-        { error: error.message || "Could not send verification code." },
-        { status: error.status || 500 },
+        {
+          error: "Please wait 60 seconds before requesting another code.",
+          retry_after_seconds: OTP_COOLDOWN_SECONDS,
+        },
+        { status: 429 },
       );
+    }
+
+    await supabase
+      .from("phone_otps")
+      .update({ consumed: true })
+      .eq("phone", normalizedPhone)
+      .eq("consumed", false);
+
+    const code = generateOtpCode();
+    const expiresAt = new Date(now.getTime() + OTP_EXPIRES_MINUTES * 60 * 1000).toISOString();
+    const { data: otpRow, error: insertError } = await supabase
+      .from("phone_otps")
+      .insert({
+        phone: normalizedPhone,
+        profile_id: loginProfiles[0]?.id ?? null,
+        code_hash: hashOtp(code, normalizedPhone),
+        expires_at: expiresAt,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) throw insertError;
+
+    try {
+      await withTimeout(sendParentOtpEmail({ to: email, code }));
+    } catch (sendError) {
+      if (otpRow?.id) {
+        await supabase.from("phone_otps").update({ consumed: true }).eq("id", otpRow.id);
+      }
+      throw sendError;
     }
 
     return NextResponse.json({
