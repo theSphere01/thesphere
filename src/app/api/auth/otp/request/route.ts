@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: getAppUrl("/login"),
+        emailRedirectTo: getAppUrl("/login", req.nextUrl.origin),
         data: {
           parent_phone: normalizedPhone,
           source: "sphere-parent-portal",
