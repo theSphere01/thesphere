@@ -29,6 +29,9 @@ type OtpVerifyData = {
   profiles?: FoundProfile[];
 };
 
+const OTP_COOLDOWN_SECONDS = 60;
+const OTP_COOLDOWN_KEY = "sphere-parent-otp-cooldown-until";
+
 function generateInitials(name: string): string {
   const parts = name.trim().split(" ");
   if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
@@ -86,6 +89,7 @@ export default function LoginPage() {
   const [info, setInfo] = useState("");
   const [profile, setProfile] = useState<FoundProfile | null>(null);
   const [profiles, setProfiles] = useState<FoundProfile[]>([]);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const fullPhoneRef = useRef("");
 
   useEffect(() => {
@@ -94,9 +98,31 @@ export default function LoginPage() {
     }
   }, [router]);
 
+  useEffect(() => {
+    function syncCooldown() {
+      const storedUntil = Number(sessionStorage.getItem(OTP_COOLDOWN_KEY) || "0");
+      const seconds = Math.max(0, Math.ceil((storedUntil - Date.now()) / 1000));
+      setCooldownSeconds(seconds);
+      if (seconds === 0) sessionStorage.removeItem(OTP_COOLDOWN_KEY);
+    }
+
+    syncCooldown();
+    const interval = window.setInterval(syncCooldown, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  function startCooldown(seconds = OTP_COOLDOWN_SECONDS) {
+    sessionStorage.setItem(OTP_COOLDOWN_KEY, String(Date.now() + seconds * 1000));
+    setCooldownSeconds(seconds);
+  }
+
   async function requestCode(e: React.FormEvent) {
     e.preventDefault();
     if (!phone.trim()) { setError("Please enter your phone number"); return; }
+    if (cooldownSeconds > 0) {
+      setError(`Please wait ${cooldownSeconds}s before requesting another code.`);
+      return;
+    }
     setLoading(true); setError(""); setInfo("");
     setCode("");
     setProfile(null);
@@ -113,9 +139,14 @@ export default function LoginPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: fullPhone }),
       });
-      const json = await res.json() as { data?: OtpRequestData; error?: string };
-      if (!res.ok) { setError(json.error ?? "Something went wrong. Please try again."); return; }
+      const json = await res.json() as { data?: OtpRequestData; error?: string; retry_after_seconds?: number };
+      if (!res.ok) {
+        if (res.status === 429) startCooldown(json.retry_after_seconds ?? OTP_COOLDOWN_SECONDS);
+        setError(json.error ?? "Something went wrong. Please try again.");
+        return;
+      }
       if (json.data?.mode === "email") {
+        startCooldown();
         setInfo(`We sent a 6-digit code to ${json.data.destination}.`);
         setStep("code");
         return;
@@ -188,8 +219,8 @@ export default function LoginPage() {
                   </div>
                   {error && <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.6rem" }}>{error}</p>}
                 </div>
-                <motion.button className="login-submit-button" type="submit" disabled={loading || !phone.trim()} whileTap={{ scale: 0.97 }} style={primaryBtn(loading || !phone.trim())}>
-                  {loading ? "Sending code..." : (<><Mail size={18} /> Send Email Code <ArrowRight size={20} /></>)}
+                <motion.button className="login-submit-button" type="submit" disabled={loading || !phone.trim() || cooldownSeconds > 0} whileTap={{ scale: 0.97 }} style={primaryBtn(loading || !phone.trim() || cooldownSeconds > 0)}>
+                  {loading ? "Sending code..." : cooldownSeconds > 0 ? `Resend in ${cooldownSeconds}s` : (<><Mail size={18} /> Send Email Code <ArrowRight size={20} /></>)}
                 </motion.button>
               </form>
               <div style={{ textAlign: "center", marginTop: "1.5rem", color: "rgba(255,255,255,0.4)", fontSize: "0.82rem", lineHeight: 1.6 }}>
@@ -216,7 +247,7 @@ export default function LoginPage() {
                 </motion.button>
               </form>
               <button onClick={() => { setStep("phone"); setCode(""); setError(""); setInfo(""); }} style={{ width: "100%", marginTop: "0.75rem", padding: "0.8rem", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
-                <ChevronLeft size={16} /> Change number / resend
+                <ChevronLeft size={16} /> {cooldownSeconds > 0 ? `Change number / resend in ${cooldownSeconds}s` : "Change number / resend"}
               </button>
             </motion.div>
           )}

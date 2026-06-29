@@ -7,6 +7,11 @@ import { getAppUrl } from "@/lib/app-url";
 
 const schema = z.object({ phone: z.string().min(8).max(32) });
 
+function isRateLimitError(error: { message?: string; status?: number }) {
+  const message = (error.message ?? "").toLowerCase();
+  return error.status === 429 || message.includes("rate limit") || message.includes("too many");
+}
+
 // POST /api/auth/otp/request
 // The phone number identifies the parent record; the OTP is delivered to the
 // email captured during registration for that same phone.
@@ -29,6 +34,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
+      if (isRateLimitError(error)) {
+        return NextResponse.json(
+          {
+            error: "Email sending is temporarily limited. Please wait 60 seconds before requesting another code.",
+            retry_after_seconds: 60,
+          },
+          { status: 429 },
+        );
+      }
+
       return NextResponse.json(
         { error: error.message || "Could not send verification code." },
         { status: error.status || 500 },
