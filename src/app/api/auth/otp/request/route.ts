@@ -43,6 +43,13 @@ function timeoutResponse() {
   );
 }
 
+function isSmtpAuthError(error: unknown) {
+  if (typeof error !== "object" || error === null) return false;
+  const details = error as { code?: string; response?: string; responseCode?: number; message?: string };
+  const message = `${details.message ?? ""} ${details.response ?? ""}`.toLowerCase();
+  return details.code === "EAUTH" || details.responseCode === 535 || message.includes("authentication failed");
+}
+
 // POST /api/auth/otp/request
 // The phone number identifies the parent record; the OTP is delivered to the
 // email captured during registration for that same phone.
@@ -101,6 +108,12 @@ export async function POST(req: NextRequest) {
     } catch (sendError) {
       if (otpRow?.id) {
         await supabase.from("phone_otps").update({ consumed: true }).eq("id", otpRow.id);
+      }
+      if (isSmtpAuthError(sendError)) {
+        return NextResponse.json(
+          { error: "Email service authentication failed. Please contact The Sphere staff." },
+          { status: 502 },
+        );
       }
       throw sendError;
     }
