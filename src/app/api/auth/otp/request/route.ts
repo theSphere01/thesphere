@@ -3,7 +3,7 @@ import { z } from "zod";
 import { handleRouteError } from "@/lib/auth/handle-error";
 import { getParentLoginBundle, maskEmail, ParentLoginError } from "@/lib/auth/parent-login";
 import { generateOtpCode, hashOtp } from "@/lib/auth/otp";
-import { sendParentOtpEmail } from "@/lib/email/brevo-smtp";
+import { BrevoEmailError, sendParentOtpEmail } from "@/lib/email/brevo-email";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({ phone: z.string().min(8).max(32) });
@@ -43,11 +43,21 @@ function timeoutResponse() {
   );
 }
 
-function isSmtpAuthError(error: unknown) {
+function isEmailConfigurationError(error: unknown) {
+  if (error instanceof BrevoEmailError) {
+    return error.status === 400 || error.status === 401 || error.status === 403;
+  }
+
   if (typeof error !== "object" || error === null) return false;
   const details = error as { code?: string; response?: string; responseCode?: number; message?: string };
   const message = `${details.message ?? ""} ${details.response ?? ""}`.toLowerCase();
-  return details.code === "EAUTH" || details.responseCode === 535 || message.includes("authentication failed");
+  return (
+    details.code === "EAUTH" ||
+    details.responseCode === 535 ||
+    message.includes("authentication failed") ||
+    message.includes("unauthorized") ||
+    message.includes("sender")
+  );
 }
 
 // POST /api/auth/otp/request
@@ -109,9 +119,9 @@ export async function POST(req: NextRequest) {
       if (otpRow?.id) {
         await supabase.from("phone_otps").update({ consumed: true }).eq("id", otpRow.id);
       }
-      if (isSmtpAuthError(sendError)) {
+      if (isEmailConfigurationError(sendError)) {
         return NextResponse.json(
-          { error: "Email service authentication failed. Please contact The Sphere staff." },
+          { error: "Email service configuration failed. Please contact The Sphere staff." },
           { status: 502 },
         );
       }
