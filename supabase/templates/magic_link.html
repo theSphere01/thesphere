@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Sphere login code</title>
+  </head>
+  <body style="margin:0;background:#111225;padding:0;font-family:Arial,Helvetica,sans-serif;color:#f8fafc;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#111225;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#17182d;border:1px solid rgba(255,255,255,0.12);border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="padding:28px 28px 18px;border-top:4px solid #ff6b47;">
+                <div style="font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#d4a843;font-weight:700;">The Sphere</div>
+                <h1 style="margin:12px 0 8px;font-size:28px;line-height:1.15;color:#ffffff;">Your login code</h1>
+                <p style="margin:0;color:#b8bfd7;font-size:15px;line-height:1.6;">
+                  Enter this code on The Sphere login screen to open your parent profile.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:10px 28px 20px;">
+                <div style="display:inline-block;background:#ffffff;color:#111225;border-radius:14px;padding:18px 24px;font-size:34px;line-height:1;font-weight:800;letter-spacing:8px;">
+                  {{ .Token }}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 28px 28px;">
+                <p style="margin:0;color:#b8bfd7;font-size:13px;line-height:1.6;">
+                  This code expires shortly. If you did not request it, you can ignore this email.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:18px 0 0;color:#6f7691;font-size:12px;">
+            The Sphere parent portal
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

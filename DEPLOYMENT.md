@@ -102,6 +102,18 @@ git push -u origin main
 5. **Deploy.** After it builds, set `NEXT_PUBLIC_APP_URL` to the real domain and
    redeploy so share links / QR profile URLs are correct.
 
+### Parent email OTP
+
+Parent login uses Supabase Email OTP. In Supabase Dashboard, open
+`Authentication > Emails > Templates > Magic Link`, set the subject to
+`Your The Sphere login code`, and use `supabase/templates/magic_link.html`.
+The template must include `{{ .Token }}` so the email shows a 6-digit code
+instead of only a magic link.
+
+For production branding and delivery, configure
+`Authentication > Emails > SMTP Settings` with a real SMTP provider and set
+the sender name to `The Sphere`.
+
 ---
 
 ## 5. Security verification (run after deploy)

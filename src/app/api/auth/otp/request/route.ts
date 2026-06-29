@@ -3,6 +3,7 @@ import { z } from "zod";
 import { handleRouteError } from "@/lib/auth/handle-error";
 import { getParentLoginBundle, maskEmail, ParentLoginError } from "@/lib/auth/parent-login";
 import { createOtpAuthClient } from "@/lib/supabase/otp-auth";
+import { getAppUrl } from "@/lib/app-url";
 
 const schema = z.object({ phone: z.string().min(8).max(32) });
 
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
       email,
       options: {
         shouldCreateUser: true,
+        emailRedirectTo: getAppUrl("/login"),
         data: {
           parent_phone: normalizedPhone,
           source: "sphere-parent-portal",
