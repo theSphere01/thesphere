@@ -31,11 +31,21 @@ type OtpVerifyData = {
 
 const OTP_COOLDOWN_SECONDS = 60;
 const OTP_COOLDOWN_KEY = "sphere-parent-otp-cooldown-until";
+const OTP_REQUEST_TIMEOUT_MS = 15_000;
 
 function generateInitials(name: string): string {
   const parts = name.trim().split(" ");
   if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function isAbortError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "AbortError"
+  );
 }
 
 function ArchRings({ size = 280 }: { size?: number }) {
@@ -134,14 +144,18 @@ export default function LoginPage() {
       return;
     }
     fullPhoneRef.current = fullPhone;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), OTP_REQUEST_TIMEOUT_MS);
+
     try {
       const res = await fetch("/api/auth/otp/request", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: fullPhone }),
+        signal: controller.signal,
       });
       const json = await res.json() as { data?: OtpRequestData; error?: string; retry_after_seconds?: number };
       if (!res.ok) {
-        if (res.status === 429) startCooldown(json.retry_after_seconds ?? OTP_COOLDOWN_SECONDS);
+        if (res.status === 429 || res.status === 504) startCooldown(json.retry_after_seconds ?? OTP_COOLDOWN_SECONDS);
         setError(json.error ?? "Something went wrong. Please try again.");
         return;
       }
@@ -152,9 +166,17 @@ export default function LoginPage() {
         return;
       }
       setError("Could not send the verification code. Please try again.");
-    } catch {
-      setError("Connection error — please try again.");
-    } finally { setLoading(false); }
+    } catch (err) {
+      if (isAbortError(err)) {
+        startCooldown();
+        setError("Email service is taking too long. Please try again in a minute.");
+      } else {
+        setError("Connection error - please try again.");
+      }
+    } finally {
+      window.clearTimeout(timeout);
+      setLoading(false);
+    }
   }
 
   async function verifyCode(e: React.FormEvent) {
