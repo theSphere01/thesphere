@@ -1,67 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { handleRouteError } from "@/lib/auth/handle-error";
-import { phoneSearchVariants } from "@/lib/phone";
+import { getParentLoginBundle, maskEmail, ParentLoginError } from "@/lib/auth/parent-login";
+import { createOtpAuthClient } from "@/lib/supabase/otp-auth";
 
 const schema = z.object({ phone: z.string().min(8).max(32) });
 
-type LoginProfile = {
-  id: string;
-  name: string;
-  total_points: number | null;
-  avatar_url?: string | null;
-  current_streak: number | null;
-  visit_count: number | null;
-  lands_visited?: string[] | null;
-};
-
-function toLoginProfile(profile: LoginProfile) {
-  return {
-    id: profile.id,
-    name: profile.name,
-    total_points: profile.total_points ?? 0,
-    avatar_url: profile.avatar_url ?? undefined,
-    current_streak: profile.current_streak ?? 0,
-    visit_count: profile.visit_count ?? 0,
-    lands_count: (profile.lands_visited ?? []).length,
-  };
-}
-
-// ── POST /api/auth/otp/request ─────────────────────────────
-// OTP is disabled for now: find the parent profile by registered phone number
-// and let the parent open it directly.
+// POST /api/auth/otp/request
+// The phone number identifies the parent record; the OTP is delivered to the
+// email captured during registration for that same phone.
 export async function POST(req: NextRequest) {
   try {
     const { phone } = schema.parse(await req.json());
-    const phoneVariants = phoneSearchVariants(phone);
-    const supabase = createAdminClient();
+    const { email, normalizedPhone } = await getParentLoginBundle(phone);
+    const auth = createOtpAuthClient();
 
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("id, name, total_points, avatar_url, current_streak, visit_count, lands_visited")
-      .in("parent_phone", phoneVariants)
-      .order("created_at", { ascending: false })
-      .limit(10);
+    const { error } = await auth.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        data: {
+          parent_phone: normalizedPhone,
+          source: "sphere-parent-portal",
+        },
+      },
+    });
 
     if (error) {
-      throw error;
+      return NextResponse.json(
+        { error: error.message || "Could not send verification code." },
+        { status: error.status || 500 },
+      );
     }
-
-    if (!profiles?.length) {
-      return NextResponse.json({ error: "No registered profile found for this phone number." }, { status: 404 });
-    }
-
-    const loginProfiles = profiles.map(toLoginProfile);
 
     return NextResponse.json({
       data: {
-        mode: "phone-only",
-        profile: loginProfiles[0],
-        profiles: loginProfiles,
+        mode: "email",
+        sent: true,
+        destination: maskEmail(email),
       },
     });
   } catch (err) {
+    if (err instanceof ParentLoginError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return handleRouteError(err);
   }
 }

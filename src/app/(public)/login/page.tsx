@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, ArrowRight, ChevronLeft, ShieldCheck, Zap } from "lucide-react";
+import { Phone, ArrowRight, ChevronLeft, ShieldCheck, Zap, Mail } from "lucide-react";
 import Link from "next/link";
 import { normalizePhone } from "@/lib/phone";
 import { getActiveProfileSession, setActiveProfileSession } from "@/lib/profile-session";
@@ -21,8 +21,13 @@ interface FoundProfile {
 }
 
 type OtpRequestData =
-  | { mode?: "sms"; sent: true }
-  | { mode: "phone-only"; profile: FoundProfile; profiles?: FoundProfile[] };
+  | { mode: "email"; sent: true; destination: string };
+
+type OtpVerifyData = {
+  mode: "verified";
+  profile: FoundProfile;
+  profiles?: FoundProfile[];
+};
 
 function generateInitials(name: string): string {
   const parts = name.trim().split(" ");
@@ -93,6 +98,9 @@ export default function LoginPage() {
     e.preventDefault();
     if (!phone.trim()) { setError("Please enter your phone number"); return; }
     setLoading(true); setError(""); setInfo("");
+    setCode("");
+    setProfile(null);
+    setProfiles([]);
     const fullPhone = normalizePhone(phone, prefix);
     if (!fullPhone) {
       setError("Please enter a valid phone number");
@@ -107,19 +115,12 @@ export default function LoginPage() {
       });
       const json = await res.json() as { data?: OtpRequestData; error?: string };
       if (!res.ok) { setError(json.error ?? "Something went wrong. Please try again."); return; }
-      if (json.data?.mode === "phone-only") {
-        const foundProfiles = json.data.profiles?.length ? json.data.profiles : [json.data.profile];
-        setProfiles(foundProfiles);
-        setProfile(foundProfiles[0] ?? null);
-        setInfo(
-          foundProfiles.length > 1
-            ? "No code needed. Choose the profile linked to this phone."
-            : "No code needed. We found the profile linked to this phone."
-        );
-        setStep("confirm");
+      if (json.data?.mode === "email") {
+        setInfo(`We sent a 6-digit code to ${json.data.destination}.`);
+        setStep("code");
         return;
       }
-      setError("Phone login is direct now. Please try again.");
+      setError("Could not send the verification code. Please try again.");
     } catch {
       setError("Connection error — please try again.");
     } finally { setLoading(false); }
@@ -134,9 +135,12 @@ export default function LoginPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: fullPhoneRef.current, code }),
       });
-      const json = await res.json() as { data?: FoundProfile; error?: string };
-      if (!res.ok || !json.data) { setError(json.error ?? "Incorrect or expired code."); return; }
-      setProfile(json.data);
+      const json = await res.json() as { data?: OtpVerifyData; error?: string };
+      if (!res.ok || !json.data?.profile) { setError(json.error ?? "Incorrect or expired code."); return; }
+      const foundProfiles = json.data.profiles?.length ? json.data.profiles : [json.data.profile];
+      setProfiles(foundProfiles);
+      setProfile(foundProfiles[0] ?? null);
+      setInfo(foundProfiles.length > 1 ? "Code verified. Choose the camper profile to open." : "Code verified.");
       setStep("confirm");
     } catch {
       setError("Connection error — please try again.");
@@ -163,7 +167,7 @@ export default function LoginPage() {
             <div style={{ display: "inline-block", background: "rgba(255,107,71,0.12)", border: "1px solid rgba(255,107,71,0.3)", borderRadius: 999, padding: "0.3rem 1rem", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-sphere-coral)", marginBottom: "0.75rem" }}>The Sphere</div>
             <h1 style={{ fontSize: "clamp(1.8rem, 7vw, 2.6rem)", fontWeight: 900, lineHeight: 1.05, background: "linear-gradient(135deg, var(--color-sphere-coral) 0%, var(--color-sphere-gold) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", margin: "0 0 0.4rem" }}>Welcome Back!</h1>
             <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.95rem" }}>
-              {step === "code" ? "Enter the code we sent you" : "Enter your registered phone to open your profile"}
+              {step === "code" ? "Enter the code we sent to the linked email" : "Enter your registered phone to open your profile"}
             </p>
           </div>
         </motion.div>
@@ -185,11 +189,11 @@ export default function LoginPage() {
                   {error && <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.6rem" }}>{error}</p>}
                 </div>
                 <motion.button className="login-submit-button" type="submit" disabled={loading || !phone.trim()} whileTap={{ scale: 0.97 }} style={primaryBtn(loading || !phone.trim())}>
-                  {loading ? "Opening profile..." : (<>Open Profile <ArrowRight size={20} /></>)}
+                  {loading ? "Sending code..." : (<><Mail size={18} /> Send Email Code <ArrowRight size={20} /></>)}
                 </motion.button>
               </form>
               <div style={{ textAlign: "center", marginTop: "1.5rem", color: "rgba(255,255,255,0.4)", fontSize: "0.82rem", lineHeight: 1.6 }}>
-                Use the parent phone number from registration. No OTP code is needed.
+                Use the parent phone number from registration. The code will be sent to the linked email.
                 <br />
                 <Link href="/register" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "underline", textUnderlineOffset: 3 }}>First time here? Register</Link>
               </div>

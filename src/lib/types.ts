@@ -66,6 +66,7 @@ export interface Profile {
   avatar_url?: string;
   parent_name?: string;
   parent_phone?: string;
+  parent_email?: string;
   total_points: number;
   season_points: number;
   visit_count: number;
@@ -250,5 +251,6 @@ export interface RegisterRequest {
   age: number;
   parent_name: string;
   parent_phone: string;
+  parent_email: string;
   nfc_uid?: string;
 }

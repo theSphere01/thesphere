@@ -55,7 +55,8 @@ export async function GET(req: NextRequest) {
           p =>
             p.name.toLowerCase().includes(q) ||
             (p.parent_name ?? "").toLowerCase().includes(q) ||
-            (p.parent_phone ?? "").toLowerCase().includes(q)
+            (p.parent_phone ?? "").toLowerCase().includes(q) ||
+            (p.parent_email ?? "").toLowerCase().includes(q)
         );
       }
       return NextResponse.json({ data: results.slice(0, limit) });
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
     const supabase = createAdminClient();
     let query = supabase
       .from("profiles")
-      .select("id, name, age, avatar_url, parent_name, parent_phone, total_points, season_points, visit_count, current_streak, lands_visited, created_at")
+      .select("id, name, age, avatar_url, parent_name, parent_phone, parent_email, total_points, season_points, visit_count, current_streak, lands_visited, created_at")
       .order("total_points", { ascending: false })
       .limit(limit);
 
@@ -75,6 +76,7 @@ export async function GET(req: NextRequest) {
           `name.ilike.%${safeSearch}%`,
           `parent_name.ilike.%${safeSearch}%`,
           `parent_phone.ilike.%${safeSearch}%`,
+          `parent_email.ilike.%${safeSearch}%`,
         ].join(",")
       );
     }

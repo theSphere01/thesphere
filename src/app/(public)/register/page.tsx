@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import { CheckCircle, Smartphone, Copy, ArrowRight, Wifi, User, Phone, Hash, CalendarDays } from "lucide-react";
+import { CheckCircle, Smartphone, Copy, ArrowRight, Wifi, User, Phone, Hash, CalendarDays, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { normalizePhone } from "@/lib/phone";
@@ -15,6 +15,7 @@ interface FormData {
   age: string;
   parent_name: string;
   parent_phone: string;
+  parent_email: string;
 }
 
 interface FormErrors {
@@ -22,6 +23,7 @@ interface FormErrors {
   age?: string;
   parent_name?: string;
   parent_phone?: string;
+  parent_email?: string;
 }
 
 function validateForm(data: FormData): FormErrors {
@@ -33,6 +35,8 @@ function validateForm(data: FormData): FormErrors {
   if (!data.parent_name.trim()) errors.parent_name = "Parent's name is required";
   if (!data.parent_phone.trim() || data.parent_phone.length < 8)
     errors.parent_phone = "Valid phone number required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.parent_email.trim()))
+    errors.parent_email = "Valid email address required";
   return errors;
 }
 
@@ -44,6 +48,7 @@ export default function RegisterPage() {
     age: "",
     parent_name: "",
     parent_phone: "",
+    parent_email: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -95,6 +100,7 @@ export default function RegisterPage() {
           age:          Number(form.age),
           parent_name:  form.parent_name.trim(),
           parent_phone: normalizePhone(form.parent_phone),
+          parent_email: form.parent_email.trim().toLowerCase(),
         }),
       });
       const json = await res.json() as { data?: { id: string; name: string; token?: string }; error?: string };
@@ -294,6 +300,22 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   placeholder="+20 xxx xxx xxxx"
                   style={inputStyle(!!errors.parent_phone)}
+                />
+              </FieldGroup>
+
+              <FieldGroup
+                label="Parent's Email Address"
+                icon={<Mail size={15} />}
+                error={errors.parent_email}
+              >
+                <input
+                  name="parent_email"
+                  type="email"
+                  value={form.parent_email}
+                  onChange={handleChange}
+                  placeholder="parent@example.com"
+                  autoComplete="email"
+                  style={inputStyle(!!errors.parent_email)}
                 />
               </FieldGroup>
 

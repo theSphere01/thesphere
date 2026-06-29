@@ -106,7 +106,7 @@ export default function CampersPage() {
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "rgba(255,255,255,0.4)" }} />
         <input
           type="text"
-          placeholder="Search by name or phone…"
+          placeholder="Search by name, phone, or email..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full pl-11 pr-4 py-3 rounded-xl text-white text-sm outline-none"
@@ -170,6 +170,11 @@ export default function CampersPage() {
                 {camper.parent_phone && (
                   <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
                     Phone: {camper.parent_phone}
+                  </div>
+                )}
+                {camper.parent_email && (
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Email: {camper.parent_email}
                   </div>
                 )}
               </div>

@@ -45,7 +45,7 @@ export default function ProfileLandingPage() {
         Your Profile
       </h1>
       <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "1rem", marginBottom: "1.5rem", maxWidth: 360 }}>
-        Open your profile with the parent phone number used during registration.
+        Open your profile with the parent phone number, then verify the code sent to the linked email.
       </p>
 
       <Link
@@ -69,7 +69,7 @@ export default function ProfileLandingPage() {
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        <LogIn size={18} /> Open With Phone
+        <LogIn size={18} /> Open With Phone + Email Code
       </Link>
 
       <div style={{ margin: "0.75rem 0 1rem", color: "rgba(255,255,255,0.28)", fontSize: "0.82rem" }}>
